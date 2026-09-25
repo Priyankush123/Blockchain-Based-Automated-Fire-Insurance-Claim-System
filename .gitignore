@@ -9,6 +9,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+*.md
+.python-version
+pyproject.toml
+uv.lock
 
 # MLflow
 mlruns/
