@@ -1,0 +1,14 @@
+data:
+  raw_path: "../../data/raw/fire_sensor_training_data.csv"
+  split_ratio:
+    test_size: 0.15
+    val_size: 0.15
+  random_seed: 42
+
+model:
+  type: "RandomForestClassifier"
+  search_space:
+    rf__n_estimators: [50, 100]
+    rf__max_depth: [3, 5, 10]
+  cv_folds: 5
+  scoring: "f1_macro"

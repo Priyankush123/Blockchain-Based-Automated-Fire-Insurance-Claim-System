@@ -1,0 +1,16 @@
+{
+    "model_type": "RandomForestClassifier",
+    "hyperparameters": {
+        "rf__max_depth": 10,
+        "rf__n_estimators": 100
+    },
+    "features": [
+        "temperature",
+        "smoke_level",
+        "duration_seconds",
+        "temp_smoke_interaction",
+        "flame_detected",
+        "is_high_risk"
+    ],
+    "test_f1_macro": 0.9521231350227632
+}
