@@ -1,0 +1,27 @@
+{
+  "name": "blockchain-based-automated-fire-insurance-claim-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Priyankush123/Blockchain-Based-Automated-Fire-Insurance-Claim-System.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Priyankush123/Blockchain-Based-Automated-Fire-Insurance-Claim-System/issues"
+  },
+  "homepage": "https://github.com/Priyankush123/Blockchain-Based-Automated-Fire-Insurance-Claim-System#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "@types/node": "^22.20.4",
+    "ethers": "^6.17.0",
+    "hardhat": "^2.29.1",
+    "typescript": "~6.0.3"
+  }
+}
