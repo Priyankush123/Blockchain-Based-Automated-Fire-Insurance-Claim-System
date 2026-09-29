@@ -1,0 +1,125 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml
+# Blockchain-Based Automated Fire Insurance Claim System
+#
+# Services:
+#   1. hardhat-node  – Local Ethereum blockchain (Hardhat)
+#   2. contract-deploy – One-shot service that deploys FireInsurance.sol
+#   3. backend       – FastAPI application (AI + rule engine + REST API)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── 1. Local Ethereum Node (Hardhat) ────────────────────────────────────────
+  hardhat-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.hardhat
+    container_name: hardhat-node
+    ports:
+      - "8545:8545"          # Expose JSON-RPC to host for debugging / MetaMask
+    networks:
+      - fire-net
+    healthcheck:
+      test:
+        - CMD
+        - sh
+        - -c
+        - |
+          curl -sf -X POST http://localhost:8545 \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── 2. Contract Deployer (runs once, then exits) ────────────────────────────
+  contract-deploy:
+    build:
+      context: .
+      dockerfile: Dockerfile.hardhat
+    container_name: contract-deploy
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    networks:
+      - fire-net
+    volumes:
+      - shared-env:/app/env-out         # write contract address here
+    environment:
+      - WEB3_RPC_URL=http://hardhat-node:8545
+    # Override entrypoint to run the deploy helper script
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache curl 2>/dev/null || apt-get install -y curl 2>/dev/null || true
+        npx hardhat run scripts/deploy_fire_contract.js --network dockerlocal 2>&1 | tee /tmp/deploy.log
+        ADDR=$$(grep -oE '0x[0-9a-fA-F]{40}' /tmp/deploy.log | head -1)
+        echo "FI_CONTRACT_ADDRESS=$$ADDR" > /app/env-out/contract.env
+        echo "Deployed contract address: $$ADDR"
+    restart: "no"
+
+  # ── 3. FastAPI Backend ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fire-backend
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+      contract-deploy:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    networks:
+      - fire-net
+    volumes:
+      - shared-env:/app/env-out             # read contract address
+      - db-data:/app/backend/storage        # persist SQLite database
+    environment:
+      # Blockchain
+      - WEB3_RPC_URL=http://hardhat-node:8545
+      - FI_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+      # These values are overridden at runtime by the .env file or env vars above
+      - TEMPERATURE_THRESHOLD=60.0
+      - SMOKE_THRESHOLD=400
+      - REQUIRED_DURATION_SECONDS=5
+      # AI model paths (relative to WORKDIR /app)
+      - MODEL_PATH=ai/model/best_model.pkl
+      - PREPROCESSOR_PATH=ai/model/preprocessing_pipeline.pkl
+      - METADATA_PATH=ai/model/model_metadata.json
+    # Read the deployed contract address from the shared volume before starting
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -f /app/env-out/contract.env ]; then
+          export $(cat /app/env-out/contract.env | xargs)
+        fi
+        echo "Using contract address: $FI_CONTRACT_ADDRESS"
+        exec uvicorn backend.app:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Networks & Volumes
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  fire-net:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+  shared-env:
+    driver: local

@@ -1,0 +1,68 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# MLflow runs
+mlruns/
+
+# ── Node / Hardhat ────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Hardhat artifacts and cache (rebuilt inside container)
+artifacts/
+cache/
+typechain-types/
+
+# TypeScript compiled output
+dist/
+
+# ── Git ───────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Environment & secrets ─────────────────────────────────────
+# .env is copied explicitly where needed; exclude here
+.env
+.env.*
+
+# ── IDE / OS ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Docker files themselves ───────────────────────────────────
+Dockerfile*
+docker-compose*.yml
+docker/
+
+# ── SQLite database (use named volume instead) ────────────────
+backend/storage/database.db
