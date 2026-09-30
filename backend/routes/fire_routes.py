@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 import uuid
 import json
 import os
-from sqlmodel import Session
+from sqlmodel import Session, select
 from backend.models.db import get_session
 from backend.models.tables import FireEvent, Claim, Policy
 from backend.models.sensor_data import SensorData, StoredSensorData
@@ -76,7 +76,7 @@ def get_model_info():
 # CRUD endpoints for fire events
 @router.get("/fire/events")
 def list_events(session: Session = Depends(get_session)):
-    events = session.exec(FireEvent.select()).all()
+    events = session.exec(select(FireEvent)).all()
     return events
 
 @router.get("/fire/events/{event_id}")
