@@ -13,10 +13,10 @@ class Settings(BaseSettings):
 
     # Blockchain settings
     web3_rpc_url: str = "http://127.0.0.1:8545"
-    fi_contract_address: str = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-    fi_private_key: str = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    fi_contract_address: str = ""
+    fi_private_key: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()
 
