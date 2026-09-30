@@ -4,7 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "node:start": "hardhat node",
+    "contract:deploy": "hardhat run scripts/deploy_fire_contract.js --network local",
+    "frontend:install": "npm --prefix frontend install",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build"
   },
   "repository": {
     "type": "git",
@@ -23,5 +28,9 @@
     "ethers": "^6.17.0",
     "hardhat": "^2.29.1",
     "typescript": "~6.0.3"
+  },
+  "allowScripts": {
+    "keccak@3.0.4": true,
+    "secp256k1@4.0.5": true
   }
 }

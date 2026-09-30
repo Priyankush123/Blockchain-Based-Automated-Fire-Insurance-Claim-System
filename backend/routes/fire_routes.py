@@ -57,6 +57,7 @@ def verify_fire_endpoint(data: SensorData, session: Session = Depends(get_sessio
 
     return {
         "verification": result,
+        "verification_status": status,
         "fire_event_id": fire_event.id,
         "blockchain": bc_res,
     }

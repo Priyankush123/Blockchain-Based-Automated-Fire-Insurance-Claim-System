@@ -12,6 +12,7 @@ services:
 
   # ── 1. Local Ethereum Node (Hardhat) ────────────────────────────────────────
   hardhat-node:
+    image: priyankush08/blockchain-fire-insurance-hardhat:latest
     build:
       context: .
       dockerfile: Dockerfile.hardhat
@@ -37,6 +38,7 @@ services:
 
   # ── 2. Contract Deployer (runs once, then exits) ────────────────────────────
   contract-deploy:
+    image: priyankush08/blockchain-fire-insurance-hardhat:latest
     build:
       context: .
       dockerfile: Dockerfile.hardhat
@@ -63,6 +65,7 @@ services:
 
   # ── 3. FastAPI Backend ───────────────────────────────────────────────────────
   backend:
+    image: priyankush08/blockchain-fire-insurance:latest
     build:
       context: .
       dockerfile: Dockerfile

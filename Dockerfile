@@ -1,7 +1,20 @@
 # ──────────────────────────────────────────────────────────────
-# Stage 1 – Builder: install Python deps into a clean layer
+# Stage 1 – Frontend Builder: Build React 19 UI
 # ──────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS builder
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /frontend
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
+# ──────────────────────────────────────────────────────────────
+# Stage 2 – Python Builder: install Python deps into a clean layer
+# ──────────────────────────────────────────────────────────────
+FROM python:3.12-slim AS python-builder
 
 WORKDIR /app
 
@@ -19,14 +32,22 @@ RUN pip install --upgrade pip && \
     pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # ──────────────────────────────────────────────────────────────
-# Stage 2 – Runtime: lean final image
+# Stage 3 – Runtime: lean production image
 # ──────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS runtime
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
-# Copy installed packages from builder stage
-COPY --from=builder /install /usr/local
+ENV PYTHONUNBUFFERED=1 \
+    WEB3_RPC_URL=http://hardhat-node:8545 \
+    FI_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 \
+    FI_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+
+# Copy installed Python packages from python-builder stage
+COPY --from=python-builder /install /usr/local
+
+# Copy compiled React frontend assets
+COPY --from=frontend-builder /frontend/dist frontend/dist
 
 # Copy application source code
 COPY backend/   backend/
@@ -44,4 +65,4 @@ HEALTHCHECK --interval=15s --timeout=5s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
 # Run the FastAPI app with Uvicorn
-CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]

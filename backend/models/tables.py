@@ -1,8 +1,7 @@
-'''ORM definitions for the fire‑insurance system using SQLModel'''
-
 from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel
+from pydantic import NaiveDatetime
 
 class FireEvent(SQLModel, table=True):
     """A verified fire‑event that will be recorded on‑chain and used for claim evaluation."""
@@ -14,7 +13,7 @@ class FireEvent(SQLModel, table=True):
     flame_detected: bool
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: NaiveDatetime = Field(default_factory=datetime.now)
     verified: bool = False  # set by verification service
 
 class Policy(SQLModel, table=True):
@@ -32,5 +31,5 @@ class Claim(SQLModel, table=True):
     policy_id: str = Field(foreign_key="policy.id")
     status: str = Field(description="approved / rejected / manual_review")
     payout_amount: float = 0.0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: NaiveDatetime = Field(default_factory=datetime.now)
+    updated_at: NaiveDatetime = Field(default_factory=datetime.now)

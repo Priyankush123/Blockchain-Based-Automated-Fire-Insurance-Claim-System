@@ -136,8 +136,8 @@ pytest==9.1.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.3
 python-json-logger==4.2.0
-pywin32==312
-pywinpty==3.0.5
+pywin32==312; sys_platform == 'win32'
+pywinpty==3.0.5; sys_platform == 'win32'
 pyyaml==6.0.3
 pyzmq==27.2.0
 referencing==0.37.0
@@ -154,7 +154,7 @@ six==1.17.0
 skops==0.16.0
 smmap==5.0.3
 soupsieve==2.10
-sqlalchemy==2.1.1
+sqlalchemy==2.0.54
 sqlparse==0.6.0
 stack-data==0.6.3
 starlette==1.7.0
@@ -180,3 +180,5 @@ werkzeug==3.1.8
 widgetsnbextension==4.0.16
 yarl==1.25.1
 zipp==4.1.0
+sqlmodel==0.0.47
+web3==8.0.0
