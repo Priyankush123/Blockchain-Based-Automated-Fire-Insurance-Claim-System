@@ -104,13 +104,23 @@ def register_event(event_dict: dict) -> dict:
         "gasPrice": w3_conn.to_wei("1", "gwei")
     })
     signed = w3_conn.eth.account.sign_transaction(tx, private_key=pk)
-    tx_hash = w3_conn.eth.send_raw_transaction(signed.rawTransaction)
+    raw_tx = getattr(signed, "raw_transaction", None) or getattr(signed, "rawTransaction", None)
+    tx_hash = w3_conn.eth.send_raw_transaction(raw_tx)
     receipt = w3_conn.eth.wait_for_transaction_receipt(tx_hash)
     # Extract the event ID from the EventRegistered event
     try:
         logs = target_contract.events.EventRegistered().process_receipt(receipt)
-        event_id = logs[0]["args"]["eventId"] if logs else None
+        raw_event_id = logs[0]["args"]["eventId"] if logs else None
+        if hasattr(raw_event_id, "hex"):
+            event_id = "0x" + raw_event_id.hex() if not str(raw_event_id).startswith("0x") else str(raw_event_id)
+        elif isinstance(raw_event_id, bytes):
+            event_id = "0x" + raw_event_id.hex()
+        else:
+            event_id = raw_event_id
     except ContractLogicError:
         event_id = None
-    return {"tx_hash": tx_hash.hex(), "event_id": event_id, "receipt": dict(receipt)}
+    tx_hash_hex = tx_hash.hex() if hasattr(tx_hash, "hex") else str(tx_hash)
+    if not tx_hash_hex.startswith("0x"):
+        tx_hash_hex = "0x" + tx_hash_hex
+    return {"tx_hash": tx_hash_hex, "event_id": event_id, "receipt": json.loads(Web3.to_json(receipt))}
 

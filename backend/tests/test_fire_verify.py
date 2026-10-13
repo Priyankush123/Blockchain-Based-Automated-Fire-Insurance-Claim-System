@@ -45,6 +45,12 @@ def test_model_info():
         assert response.status_code == 200
         assert "model_type" in response.json()
 
+def test_list_fire_events():
+    with TestClient(app) as client:
+        response = client.get("/api/fire/events")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
 # Scenario 1: Clean normal
 def test_verify_clean_normal():
     with TestClient(app) as client:
