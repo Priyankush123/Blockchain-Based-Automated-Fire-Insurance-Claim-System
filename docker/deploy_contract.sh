@@ -27,29 +27,15 @@ done
 
 echo "✅  Hardhat node is up. Deploying FireInsurance contract..."
 
-# Run the Hardhat deploy script and capture output
-DEPLOY_OUTPUT=$(npx hardhat run scripts/deploy_fire_contract.js --network local 2>&1)
-echo "$DEPLOY_OUTPUT"
+# Run the Hardhat deploy script
+NETWORK="${HARDHAT_NETWORK:-dockerlocal}"
+echo "Running deploy script using network: $NETWORK"
+npx hardhat run scripts/deploy_fire_contract.js --network "$NETWORK"
 
-# Extract the deployed contract address from output line:
-#   "✅ FireInsurance deployed to: 0x..."
-CONTRACT_ADDRESS=$(echo "$DEPLOY_OUTPUT" | grep -oP '(?<=deployed to: )0x[0-9a-fA-F]+')
-
-if [ -z "$CONTRACT_ADDRESS" ]; then
-    echo "❌  Could not extract contract address from deploy output."
-    exit 1
+if [ -f /app/env-out/contract.env ]; then
+    echo "✅ Contract address file /app/env-out/contract.env:"
+    cat /app/env-out/contract.env
 fi
 
-echo "📝  Contract address: $CONTRACT_ADDRESS"
+echo "🎉 Contract deployment complete."
 
-# Write/update FI_CONTRACT_ADDRESS in the .env file
-ENV_FILE="/app/.env"
-if grep -q "^FI_CONTRACT_ADDRESS=" "$ENV_FILE" 2>/dev/null; then
-    # Replace existing line (portable sed)
-    sed -i "s|^FI_CONTRACT_ADDRESS=.*|FI_CONTRACT_ADDRESS=$CONTRACT_ADDRESS|" "$ENV_FILE"
-else
-    echo "FI_CONTRACT_ADDRESS=$CONTRACT_ADDRESS" >> "$ENV_FILE"
-fi
-
-echo "✅  FI_CONTRACT_ADDRESS written to $ENV_FILE"
-echo "🎉  Contract deployment complete."

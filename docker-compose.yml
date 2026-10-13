@@ -23,12 +23,14 @@ services:
     healthcheck:
       test:
         - CMD
-        - sh
-        - -c
+        - node
+        - -e
         - |
-          curl -sf -X POST http://localhost:8545 \
-            -H "Content-Type: application/json" \
-            -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+          const h=require('http');
+          const req=h.request({host:'localhost',port:8545,method:'POST',headers:{'Content-Type':'application/json'}},r=>{process.exit(r.statusCode===400||r.statusCode===200?0:1)});
+          req.on('error',()=>process.exit(1));
+          req.write(JSON.stringify({jsonrpc:'2.0',method:'eth_blockNumber',params:[],id:1}));
+          req.end();
       interval: 5s
       timeout: 5s
       retries: 10
@@ -50,15 +52,15 @@ services:
       - shared-env:/app/env-out         # write contract address here
     environment:
       - WEB3_RPC_URL=http://hardhat-node:8545
-    # Override entrypoint to run the deploy helper script
+    # Override entrypoint to run deploy script
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        apk add --no-cache curl 2>/dev/null || apt-get install -y curl 2>/dev/null || true
-        npx hardhat run scripts/deploy_fire_contract.js --network dockerlocal 2>&1 | tee /tmp/deploy.log
-        ADDR=$$(grep -oE '0x[0-9a-fA-F]{40}' /tmp/deploy.log | head -1)
-        echo "FI_CONTRACT_ADDRESS=$$ADDR" > /app/env-out/contract.env
-        echo "Deployed contract address: $$ADDR"
+        npx hardhat run scripts/deploy_fire_contract.js --network dockerlocal
+        if [ -f /app/env-out/contract.env ]; then
+          echo "Deployed contract details:"
+          cat /app/env-out/contract.env
+        fi
     restart: "no"
 
   # ── 3. FastAPI Backend ───────────────────────────────────────────────────────
@@ -96,7 +98,7 @@ services:
     command:
       - |
         if [ -f /app/env-out/contract.env ]; then
-          export $(cat /app/env-out/contract.env | xargs)
+          export $(cat /app/env-out/contract.env | tr -d '\r' | xargs)
         fi
         echo "Using contract address: $FI_CONTRACT_ADDRESS"
         exec uvicorn backend.app:app --host 0.0.0.0 --port 8000

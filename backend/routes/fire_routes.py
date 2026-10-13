@@ -42,7 +42,9 @@ def verify_fire_endpoint(data: SensorData, session: Session = Depends(get_sessio
     session.commit()
     session.refresh(fire_event)
 
-    # Register event on blockchain
+    # Register event on blockchain (non-fatal if unavailable)
+    bc_res = {}
+    bc_error = None
     try:
         bc_res = register_event({
             "device_id": fire_event.device_id,
@@ -53,13 +55,18 @@ def verify_fire_endpoint(data: SensorData, session: Session = Depends(get_sessio
             "verified": fire_event.verified,
         })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Blockchain registration failed: {e}")
+        bc_error = str(e)
+        print(f"[WARN] Blockchain registration failed (non-fatal): {e}")
 
-    return {
+    response = {
         "verification": result,
         "fire_event_id": fire_event.id,
         "blockchain": bc_res,
     }
+    if bc_error:
+        response["blockchain_error"] = bc_error
+
+    return response
 
 @router.get("/model/info")
 def get_model_info():
@@ -71,6 +78,24 @@ def get_model_info():
         return metadata
     except Exception as e:
         raise HTTPException(status_code=500, detail="Could not load model metadata")
+
+@router.get("/blockchain/info")
+def get_blockchain_info():
+    try:
+        from backend.services.blockchain_service import CONTRACT_ADDRESS, RPC_URL, w3
+        connected = w3.is_connected() if w3 else False
+        return {
+            "contract_address": CONTRACT_ADDRESS,
+            "rpc_url": RPC_URL,
+            "connected": connected
+        }
+    except Exception as e:
+        return {
+            "contract_address": settings.fi_contract_address.strip() if settings.fi_contract_address else None,
+            "rpc_url": settings.web3_rpc_url,
+            "connected": False,
+            "error": str(e)
+        }
 
 # CRUD endpoints for fire events
 @router.get("/fire/events")

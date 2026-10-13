@@ -34,4 +34,9 @@ app.include_router(claim_router)
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "model_loaded": app.state.model_loaded}
+    from backend.config import settings
+    return {
+        "status": "ok",
+        "model_loaded": getattr(app.state, "model_loaded", False),
+        "contract_address": settings.fi_contract_address.strip() if settings.fi_contract_address else None
+    }
