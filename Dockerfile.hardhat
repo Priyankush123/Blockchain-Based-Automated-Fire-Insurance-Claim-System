@@ -1,0 +1,24 @@
+# Hardhat local Ethereum node
+# Based on official Node.js LTS image
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copy package files first for better layer caching
+COPY package.json package-lock.json* ./
+
+# Install Hardhat and all dev dependencies
+RUN npm install
+
+# Copy Solidity contracts, Hardhat config, TypeScript config, and deploy scripts
+COPY contracts/      contracts/
+COPY scripts/        scripts/
+COPY hardhat.config.ts .
+COPY tsconfig.json .
+
+# Expose Hardhat node JSON-RPC port
+EXPOSE 8545
+
+# Start the Hardhat local blockchain node
+# --hostname 0.0.0.0  →  listen on all interfaces so other containers can reach it
+CMD ["npx", "hardhat", "node", "--hostname", "0.0.0.0"]

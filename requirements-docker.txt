@@ -1,0 +1,27 @@
+# Minimal runtime requirements for Docker (Linux)
+# No Windows packages, no Jupyter, no dev tools
+
+# Web framework
+fastapi
+uvicorn[standard]
+
+# Data validation & config
+pydantic
+pydantic-settings
+python-dotenv
+
+# Database
+sqlmodel
+sqlalchemy
+
+# Blockchain
+web3
+
+# Machine learning
+scikit-learn
+pandas
+numpy
+joblib
+
+# YAML (used by training config loader)
+pyyaml
