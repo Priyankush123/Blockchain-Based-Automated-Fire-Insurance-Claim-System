@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-<<<<<<< HEAD
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
@@ -17,14 +16,3 @@
     "./test/**/*.ts"
   ]
 }
-=======
-    "lib": ["es2023"],
-    "module": "node20",
-    "target": "es2023",
-    "skipLibCheck": true,
-    "outDir": "dist",
-    "types": ["node"],
-    "verbatimModuleSyntax": true
-  }
-}
->>>>>>> 72c00741ff8a425676ac953906d996037488592b
