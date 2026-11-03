@@ -11,14 +11,14 @@ export declare namespace FireInsurance {
     export type AssessmentStructOutput = [assessmentId: bigint, claimId: bigint, surveyor: string, buildingLoss: bigint, contentsLoss: bigint, machineryLoss: bigint, salvageValue: bigint, grossLoss: bigint, eligibleAmount: bigint, reportHash: string, submittedAt: bigint, exists: boolean] & {assessmentId: bigint, claimId: bigint, surveyor: string, buildingLoss: bigint, contentsLoss: bigint, machineryLoss: bigint, salvageValue: bigint, grossLoss: bigint, eligibleAmount: bigint, reportHash: string, submittedAt: bigint, exists: boolean }
   
 
-    export type ClaimStruct = {claimId: BigNumberish, policyId: BigNumberish, incidentId: BigNumberish, claimantAgent: AddressLike, assignedSurveyor: AddressLike, assessmentId: BigNumberish, approvedAmount: BigNumberish, settledAmount: BigNumberish, rejectionReasonHash: BytesLike, paymentReferenceHash: BytesLike, status: BigNumberish, exists: boolean}
+    export type ClaimStruct = {claimId: BigNumberish, policyId: BigNumberish, incidentId: BigNumberish, claimant: AddressLike, assignedSurveyor: AddressLike, assessmentId: BigNumberish, approvedAmount: BigNumberish, settledAmount: BigNumberish, rejectionReasonHash: BytesLike, paymentReferenceHash: BytesLike, status: BigNumberish, exists: boolean}
 
-    export type ClaimStructOutput = [claimId: bigint, policyId: bigint, incidentId: bigint, claimantAgent: string, assignedSurveyor: string, assessmentId: bigint, approvedAmount: bigint, settledAmount: bigint, rejectionReasonHash: string, paymentReferenceHash: string, status: bigint, exists: boolean] & {claimId: bigint, policyId: bigint, incidentId: bigint, claimantAgent: string, assignedSurveyor: string, assessmentId: bigint, approvedAmount: bigint, settledAmount: bigint, rejectionReasonHash: string, paymentReferenceHash: string, status: bigint, exists: boolean }
+    export type ClaimStructOutput = [claimId: bigint, policyId: bigint, incidentId: bigint, claimant: string, assignedSurveyor: string, assessmentId: bigint, approvedAmount: bigint, settledAmount: bigint, rejectionReasonHash: string, paymentReferenceHash: string, status: bigint, exists: boolean] & {claimId: bigint, policyId: bigint, incidentId: bigint, claimant: string, assignedSurveyor: string, assessmentId: bigint, approvedAmount: bigint, settledAmount: bigint, rejectionReasonHash: string, paymentReferenceHash: string, status: bigint, exists: boolean }
   
 
-    export type IncidentStruct = {incidentId: BigNumberish, policyId: BigNumberish, incidentDate: BigNumberish, reportedAt: BigNumberish, reportedBy: AddressLike, incidentReferenceHash: BytesLike, evidenceHash: BytesLike, fireReportHash: BytesLike, verifiedBy: AddressLike, verifiedAt: BigNumberish, verified: boolean, exists: boolean}
+    export type IncidentStruct = {incidentId: BigNumberish, policyId: BigNumberish, incidentDate: BigNumberish, reportedAt: BigNumberish, reportedBy: AddressLike, incidentReferenceHash: BytesLike, fireReportHash: BytesLike, verifiedBy: AddressLike, verifiedAt: BigNumberish, verified: boolean, exists: boolean}
 
-    export type IncidentStructOutput = [incidentId: bigint, policyId: bigint, incidentDate: bigint, reportedAt: bigint, reportedBy: string, incidentReferenceHash: string, evidenceHash: string, fireReportHash: string, verifiedBy: string, verifiedAt: bigint, verified: boolean, exists: boolean] & {incidentId: bigint, policyId: bigint, incidentDate: bigint, reportedAt: bigint, reportedBy: string, incidentReferenceHash: string, evidenceHash: string, fireReportHash: string, verifiedBy: string, verifiedAt: bigint, verified: boolean, exists: boolean }
+    export type IncidentStructOutput = [incidentId: bigint, policyId: bigint, incidentDate: bigint, reportedAt: bigint, reportedBy: string, incidentReferenceHash: string, fireReportHash: string, verifiedBy: string, verifiedAt: bigint, verified: boolean, exists: boolean] & {incidentId: bigint, policyId: bigint, incidentDate: bigint, reportedAt: bigint, reportedBy: string, incidentReferenceHash: string, fireReportHash: string, verifiedBy: string, verifiedAt: bigint, verified: boolean, exists: boolean }
   
 
     export type PolicyStruct = {policyId: BigNumberish, policyReferenceHash: BytesLike, propertyReferenceHash: BytesLike, policyholderReferenceHash: BytesLike, insurer: AddressLike, policyDocumentHash: BytesLike, termsHash: BytesLike, sumInsured: BigNumberish, deductible: BigNumberish, startDate: BigNumberish, endDate: BigNumberish, cancelledAt: BigNumberish, fireCovered: boolean, verified: boolean, exists: boolean}
@@ -33,11 +33,12 @@ export declare namespace FireInsurance {
     }
 
   export interface FireInsuranceInterface extends Interface {
-    getFunction(nameOrSignature: "DEFAULT_ADMIN_ROLE" | "FIRE_OFFICER_ROLE" | "INSURER_ROLE" | "SURVEYOR_ROLE" | "approveClaim" | "assessmentCount" | "assignSurveyor" | "cancelPolicy" | "claimCount" | "getAssessment" | "getClaim" | "getIncident" | "getPolicy" | "getRoleAdmin" | "getTotalAssessments" | "getTotalClaims" | "getTotalIncidents" | "getTotalPolicies" | "grantRole" | "hasRole" | "incidentCount" | "incidentToClaimId" | "isPolicyValidAt" | "policyCount" | "recordSettlement" | "registerPolicy" | "registerStakeholder" | "registeredIncidentReferences" | "registeredPolicyReferences" | "rejectClaim" | "renounceRole" | "reportFire" | "revokeRole" | "revokeStakeholder" | "submitAssessment" | "supportsInterface" | "verifyIncident" | "verifyPolicy"): FunctionFragment;
+    getFunction(nameOrSignature: "CLAIMER_ROLE" | "DEFAULT_ADMIN_ROLE" | "FIRE_OFFICER_ROLE" | "INSURER_ROLE" | "SURVEYOR_ROLE" | "approveClaim" | "assessmentCount" | "assignSurveyor" | "cancelPolicy" | "claimCount" | "getAssessment" | "getClaim" | "getIncident" | "getPolicy" | "getRoleAdmin" | "getTotalAssessments" | "getTotalClaims" | "getTotalIncidents" | "getTotalPolicies" | "grantRole" | "hasRole" | "incidentCount" | "incidentToClaimId" | "isPolicyValidAt" | "lodgeComplaint" | "policyCount" | "policyToActiveClaimId" | "recordSettlement" | "registerPolicy" | "registerStakeholder" | "registeredIncidentReferences" | "registeredPolicyReferences" | "rejectClaim" | "renounceRole" | "reportFire" | "revokeRole" | "revokeStakeholder" | "submitAssessment" | "supportsInterface" | "verifyIncident" | "verifyPolicy"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "AssessmentSubmitted" | "ClaimApproved" | "ClaimCreated" | "ClaimRejected" | "ClaimSettled" | "IncidentReported" | "IncidentVerified" | "PolicyCancelled" | "PolicyRegistered" | "PolicyVerified" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "StakeholderRegistered" | "StakeholderRevoked" | "SurveyorAssigned"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AssessmentSubmitted" | "ClaimApproved" | "ClaimInitialized" | "ClaimRejected" | "ClaimSettled" | "ComplaintLodged" | "IncidentReported" | "IncidentVerified" | "PolicyCancelled" | "PolicyRegistered" | "PolicyVerified" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "StakeholderRegistered" | "StakeholderRevoked" | "SurveyorAssigned"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'DEFAULT_ADMIN_ROLE', values?: undefined): string;
+    encodeFunctionData(functionFragment: 'CLAIMER_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'DEFAULT_ADMIN_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'FIRE_OFFICER_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'INSURER_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'SURVEYOR_ROLE', values?: undefined): string;
@@ -60,7 +61,9 @@ encodeFunctionData(functionFragment: 'hasRole', values: [BytesLike, AddressLike]
 encodeFunctionData(functionFragment: 'incidentCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'incidentToClaimId', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isPolicyValidAt', values: [BigNumberish, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'lodgeComplaint', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'policyCount', values?: undefined): string;
+encodeFunctionData(functionFragment: 'policyToActiveClaimId', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'recordSettlement', values: [BigNumberish, BigNumberish, BytesLike]): string;
 encodeFunctionData(functionFragment: 'registerPolicy', values: [FireInsurance.PolicyInputStruct]): string;
 encodeFunctionData(functionFragment: 'registerStakeholder', values: [AddressLike, BigNumberish]): string;
@@ -68,7 +71,7 @@ encodeFunctionData(functionFragment: 'registeredIncidentReferences', values: [By
 encodeFunctionData(functionFragment: 'registeredPolicyReferences', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'rejectClaim', values: [BigNumberish, BytesLike]): string;
 encodeFunctionData(functionFragment: 'renounceRole', values: [BytesLike, AddressLike]): string;
-encodeFunctionData(functionFragment: 'reportFire', values: [BigNumberish, BigNumberish, BytesLike, BytesLike]): string;
+encodeFunctionData(functionFragment: 'reportFire', values: [BigNumberish, BigNumberish, BytesLike]): string;
 encodeFunctionData(functionFragment: 'revokeRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'revokeStakeholder', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'submitAssessment', values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BytesLike]): string;
@@ -76,7 +79,8 @@ encodeFunctionData(functionFragment: 'supportsInterface', values: [BytesLike]): 
 encodeFunctionData(functionFragment: 'verifyIncident', values: [BigNumberish, BytesLike]): string;
 encodeFunctionData(functionFragment: 'verifyPolicy', values: [BigNumberish]): string;
 
-    decodeFunctionResult(functionFragment: 'DEFAULT_ADMIN_ROLE', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'CLAIMER_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'DEFAULT_ADMIN_ROLE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'FIRE_OFFICER_ROLE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'INSURER_ROLE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'SURVEYOR_ROLE', data: BytesLike): Result;
@@ -99,7 +103,9 @@ decodeFunctionResult(functionFragment: 'hasRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'incidentCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'incidentToClaimId', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isPolicyValidAt', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'lodgeComplaint', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'policyCount', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'policyToActiveClaimId', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'recordSettlement', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerPolicy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerStakeholder', data: BytesLike): Result;
@@ -141,7 +147,7 @@ decodeFunctionResult(functionFragment: 'verifyPolicy', data: BytesLike): Result;
 
   
 
-    export namespace ClaimCreatedEvent {
+    export namespace ClaimInitializedEvent {
       export type InputTuple = [claimId: BigNumberish, incidentId: BigNumberish, policyId: BigNumberish];
       export type OutputTuple = [claimId: bigint, incidentId: bigint, policyId: bigint];
       export interface OutputObject {claimId: bigint, incidentId: bigint, policyId: bigint }
@@ -177,10 +183,22 @@ decodeFunctionResult(functionFragment: 'verifyPolicy', data: BytesLike): Result;
 
   
 
+    export namespace ComplaintLodgedEvent {
+      export type InputTuple = [claimId: BigNumberish, policyId: BigNumberish, claimer: AddressLike];
+      export type OutputTuple = [claimId: bigint, policyId: bigint, claimer: string];
+      export interface OutputObject {claimId: bigint, policyId: bigint, claimer: string }
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace IncidentReportedEvent {
-      export type InputTuple = [incidentId: BigNumberish, policyId: BigNumberish, insurer: AddressLike, incidentReferenceHash: BytesLike, evidenceHash: BytesLike];
-      export type OutputTuple = [incidentId: bigint, policyId: bigint, insurer: string, incidentReferenceHash: string, evidenceHash: string];
-      export interface OutputObject {incidentId: bigint, policyId: bigint, insurer: string, incidentReferenceHash: string, evidenceHash: string }
+      export type InputTuple = [incidentId: BigNumberish, policyId: BigNumberish, insurer: AddressLike, incidentReferenceHash: BytesLike];
+      export type OutputTuple = [incidentId: bigint, policyId: bigint, insurer: string, incidentReferenceHash: string];
+      export interface OutputObject {incidentId: bigint, policyId: bigint, insurer: string, incidentReferenceHash: string }
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -342,6 +360,14 @@ decodeFunctionResult(functionFragment: 'verifyPolicy', data: BytesLike): Result;
 
 
     
+    
+    CLAIMER_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
     
     DEFAULT_ADMIN_ROLE: TypedContractMethod<
       [],
@@ -527,8 +553,24 @@ decodeFunctionResult(functionFragment: 'verifyPolicy', data: BytesLike): Result;
     
 
     
+    lodgeComplaint: TypedContractMethod<
+      [policyId: BigNumberish, ],
+      [bigint],
+      'nonpayable'
+    >
+    
+
+    
     policyCount: TypedContractMethod<
       [],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    policyToActiveClaimId: TypedContractMethod<
+      [arg0: BigNumberish, ],
       [bigint],
       'view'
     >
@@ -592,7 +634,7 @@ decodeFunctionResult(functionFragment: 'verifyPolicy', data: BytesLike): Result;
 
     
     reportFire: TypedContractMethod<
-      [policyId: BigNumberish, incidentDate: BigNumberish, incidentReferenceHash: BytesLike, evidenceHash: BytesLike, ],
+      [policyId: BigNumberish, incidentDate: BigNumberish, incidentReferenceHash: BytesLike, ],
       [bigint],
       'nonpayable'
     >
@@ -649,7 +691,12 @@ decodeFunctionResult(functionFragment: 'verifyPolicy', data: BytesLike): Result;
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'DEFAULT_ADMIN_ROLE'): TypedContractMethod<
+    getFunction(nameOrSignature: 'CLAIMER_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'DEFAULT_ADMIN_ROLE'): TypedContractMethod<
       [],
       [string],
       'view'
@@ -764,8 +811,18 @@ getFunction(nameOrSignature: 'isPolicyValidAt'): TypedContractMethod<
       [boolean],
       'view'
     >;
+getFunction(nameOrSignature: 'lodgeComplaint'): TypedContractMethod<
+      [policyId: BigNumberish, ],
+      [bigint],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'policyCount'): TypedContractMethod<
       [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'policyToActiveClaimId'): TypedContractMethod<
+      [arg0: BigNumberish, ],
       [bigint],
       'view'
     >;
@@ -805,7 +862,7 @@ getFunction(nameOrSignature: 'renounceRole'): TypedContractMethod<
       'nonpayable'
     >;
 getFunction(nameOrSignature: 'reportFire'): TypedContractMethod<
-      [policyId: BigNumberish, incidentDate: BigNumberish, incidentReferenceHash: BytesLike, evidenceHash: BytesLike, ],
+      [policyId: BigNumberish, incidentDate: BigNumberish, incidentReferenceHash: BytesLike, ],
       [bigint],
       'nonpayable'
     >;
@@ -842,9 +899,10 @@ getFunction(nameOrSignature: 'verifyPolicy'): TypedContractMethod<
 
     getEvent(key: 'AssessmentSubmitted'): TypedContractEvent<AssessmentSubmittedEvent.InputTuple, AssessmentSubmittedEvent.OutputTuple, AssessmentSubmittedEvent.OutputObject>;
 getEvent(key: 'ClaimApproved'): TypedContractEvent<ClaimApprovedEvent.InputTuple, ClaimApprovedEvent.OutputTuple, ClaimApprovedEvent.OutputObject>;
-getEvent(key: 'ClaimCreated'): TypedContractEvent<ClaimCreatedEvent.InputTuple, ClaimCreatedEvent.OutputTuple, ClaimCreatedEvent.OutputObject>;
+getEvent(key: 'ClaimInitialized'): TypedContractEvent<ClaimInitializedEvent.InputTuple, ClaimInitializedEvent.OutputTuple, ClaimInitializedEvent.OutputObject>;
 getEvent(key: 'ClaimRejected'): TypedContractEvent<ClaimRejectedEvent.InputTuple, ClaimRejectedEvent.OutputTuple, ClaimRejectedEvent.OutputObject>;
 getEvent(key: 'ClaimSettled'): TypedContractEvent<ClaimSettledEvent.InputTuple, ClaimSettledEvent.OutputTuple, ClaimSettledEvent.OutputObject>;
+getEvent(key: 'ComplaintLodged'): TypedContractEvent<ComplaintLodgedEvent.InputTuple, ComplaintLodgedEvent.OutputTuple, ComplaintLodgedEvent.OutputObject>;
 getEvent(key: 'IncidentReported'): TypedContractEvent<IncidentReportedEvent.InputTuple, IncidentReportedEvent.OutputTuple, IncidentReportedEvent.OutputObject>;
 getEvent(key: 'IncidentVerified'): TypedContractEvent<IncidentVerifiedEvent.InputTuple, IncidentVerifiedEvent.OutputTuple, IncidentVerifiedEvent.OutputObject>;
 getEvent(key: 'PolicyCancelled'): TypedContractEvent<PolicyCancelledEvent.InputTuple, PolicyCancelledEvent.OutputTuple, PolicyCancelledEvent.OutputObject>;
@@ -867,8 +925,8 @@ getEvent(key: 'SurveyorAssigned'): TypedContractEvent<SurveyorAssignedEvent.Inpu
       ClaimApproved: TypedContractEvent<ClaimApprovedEvent.InputTuple, ClaimApprovedEvent.OutputTuple, ClaimApprovedEvent.OutputObject>;
     
 
-      'ClaimCreated(uint256,uint256,uint256)': TypedContractEvent<ClaimCreatedEvent.InputTuple, ClaimCreatedEvent.OutputTuple, ClaimCreatedEvent.OutputObject>;
-      ClaimCreated: TypedContractEvent<ClaimCreatedEvent.InputTuple, ClaimCreatedEvent.OutputTuple, ClaimCreatedEvent.OutputObject>;
+      'ClaimInitialized(uint256,uint256,uint256)': TypedContractEvent<ClaimInitializedEvent.InputTuple, ClaimInitializedEvent.OutputTuple, ClaimInitializedEvent.OutputObject>;
+      ClaimInitialized: TypedContractEvent<ClaimInitializedEvent.InputTuple, ClaimInitializedEvent.OutputTuple, ClaimInitializedEvent.OutputObject>;
     
 
       'ClaimRejected(uint256,address,bytes32)': TypedContractEvent<ClaimRejectedEvent.InputTuple, ClaimRejectedEvent.OutputTuple, ClaimRejectedEvent.OutputObject>;
@@ -879,7 +937,11 @@ getEvent(key: 'SurveyorAssigned'): TypedContractEvent<SurveyorAssignedEvent.Inpu
       ClaimSettled: TypedContractEvent<ClaimSettledEvent.InputTuple, ClaimSettledEvent.OutputTuple, ClaimSettledEvent.OutputObject>;
     
 
-      'IncidentReported(uint256,uint256,address,bytes32,bytes32)': TypedContractEvent<IncidentReportedEvent.InputTuple, IncidentReportedEvent.OutputTuple, IncidentReportedEvent.OutputObject>;
+      'ComplaintLodged(uint256,uint256,address)': TypedContractEvent<ComplaintLodgedEvent.InputTuple, ComplaintLodgedEvent.OutputTuple, ComplaintLodgedEvent.OutputObject>;
+      ComplaintLodged: TypedContractEvent<ComplaintLodgedEvent.InputTuple, ComplaintLodgedEvent.OutputTuple, ComplaintLodgedEvent.OutputObject>;
+    
+
+      'IncidentReported(uint256,uint256,address,bytes32)': TypedContractEvent<IncidentReportedEvent.InputTuple, IncidentReportedEvent.OutputTuple, IncidentReportedEvent.OutputObject>;
       IncidentReported: TypedContractEvent<IncidentReportedEvent.InputTuple, IncidentReportedEvent.OutputTuple, IncidentReportedEvent.OutputObject>;
     
 

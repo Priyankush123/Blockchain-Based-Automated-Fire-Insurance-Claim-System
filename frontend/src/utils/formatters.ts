@@ -17,6 +17,8 @@ export function formatPaise(paiseBigInt: bigint | number | string): string {
   }
 }
 
+export const formatINRPaise = formatPaise;
+
 /**
  * Converts INR Rupees number or string into paise BigInt.
  */

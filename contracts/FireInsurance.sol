@@ -4,21 +4,35 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * FireChain academic prototype.
- * Original documents remain in the insurer's local document folder.
- * Only SHA-256 document fingerprints and workflow records are stored on-chain.
- * Settlement is recorded as an off-chain payment attestation; this contract
- * does not transfer INR or ETH.
+ * @title FireInsurance
+ * @notice Enterprise-grade decentralized fire insurance claims protocol.
+ * @dev Manages policy underwriting, complaint lodging, fire incident verification,
+ * loss assessments, claim approvals, and off-chain fiat settlement attestations.
+ * Sensitive documents remain off-chain; cryptographic 32-byte hashes are recorded on-chain.
  */
 contract FireInsurance is AccessControl {
+    // ---------------------------------------------------------------
+    // 1. Roles & Access Control
+    // ---------------------------------------------------------------
     bytes32 public constant INSURER_ROLE = keccak256("INSURER_ROLE");
     bytes32 public constant FIRE_OFFICER_ROLE = keccak256("FIRE_OFFICER_ROLE");
     bytes32 public constant SURVEYOR_ROLE = keccak256("SURVEYOR_ROLE");
+    bytes32 public constant CLAIMER_ROLE = keccak256("CLAIMER_ROLE");
 
-    enum StakeholderRole { INSURER, FIRE_OFFICER, SURVEYOR }
+    enum StakeholderRole {
+        INSURER,
+        FIRE_OFFICER,
+        SURVEYOR,
+        CLAIMER
+    }
 
+    // ---------------------------------------------------------------
+    // 2. State Machine & Structs
+    // ---------------------------------------------------------------
     enum ClaimStatus {
         NONE,
+        COMPLAINT_LODGED,
+        INITIALIZED,
         SUBMITTED,
         ASSESSED,
         APPROVED,
@@ -38,7 +52,7 @@ contract FireInsurance is AccessControl {
         uint256 deductible;       // INR paise
         uint256 startDate;        // Unix timestamp
         uint256 endDate;          // Unix timestamp
-        uint256 cancelledAt;      // 0 means not cancelled
+        uint256 cancelledAt;      // 0 means active
         bool fireCovered;
         bool verified;
         bool exists;
@@ -60,11 +74,10 @@ contract FireInsurance is AccessControl {
     struct Incident {
         uint256 incidentId;
         uint256 policyId;
-        uint256 incidentDate;
-        uint256 reportedAt;
+        uint256 incidentDate;     // Unix timestamp
+        uint256 reportedAt;       // Unix timestamp
         address reportedBy;
         bytes32 incidentReferenceHash;
-        bytes32 evidenceHash;
         bytes32 fireReportHash;
         address verifiedBy;
         uint256 verifiedAt;
@@ -81,7 +94,7 @@ contract FireInsurance is AccessControl {
         uint256 machineryLoss;     // INR paise
         uint256 salvageValue;      // INR paise
         uint256 grossLoss;         // INR paise, after salvage
-        uint256 eligibleAmount;    // INR paise, after deductible
+        uint256 eligibleAmount;    // INR paise, bounded by deductible and sumInsured
         bytes32 reportHash;
         uint256 submittedAt;
         bool exists;
@@ -91,7 +104,7 @@ contract FireInsurance is AccessControl {
         uint256 claimId;
         uint256 policyId;
         uint256 incidentId;
-        address claimantAgent;     // insurer wallet submitting for policyholder
+        address claimant;
         address assignedSurveyor;
         uint256 assessmentId;
         uint256 approvedAmount;    // INR paise
@@ -102,6 +115,14 @@ contract FireInsurance is AccessControl {
         bool exists;
     }
 
+    // ---------------------------------------------------------------
+    // Storage & Counters
+    // ---------------------------------------------------------------
+    uint256 public policyCount;
+    uint256 public incidentCount;
+    uint256 public claimCount;
+    uint256 public assessmentCount;
+
     mapping(uint256 => Policy) private policies;
     mapping(uint256 => Incident) private incidents;
     mapping(uint256 => Assessment) private assessments;
@@ -110,32 +131,39 @@ contract FireInsurance is AccessControl {
     mapping(bytes32 => bool) public registeredPolicyReferences;
     mapping(bytes32 => bool) public registeredIncidentReferences;
     mapping(uint256 => uint256) public incidentToClaimId;
+    mapping(uint256 => uint256) public policyToActiveClaimId;
 
-    uint256 public policyCount;
-    uint256 public incidentCount;
-    uint256 public assessmentCount;
-    uint256 public claimCount;
-
+    // ---------------------------------------------------------------
+    // 4. Events
+    // ---------------------------------------------------------------
     event StakeholderRegistered(address indexed account, bytes32 indexed role);
     event StakeholderRevoked(address indexed account, bytes32 indexed role);
+
     event PolicyRegistered(uint256 indexed policyId, address indexed insurer, bytes32 policyReferenceHash);
     event PolicyVerified(uint256 indexed policyId, address indexed insurer);
     event PolicyCancelled(uint256 indexed policyId, address indexed insurer, uint256 cancelledAt);
-    event IncidentReported(uint256 indexed incidentId, uint256 indexed policyId, address indexed insurer, bytes32 incidentReferenceHash, bytes32 evidenceHash);
+
+    event ComplaintLodged(uint256 indexed claimId, uint256 indexed policyId, address indexed claimer);
+    event IncidentReported(uint256 indexed incidentId, uint256 indexed policyId, address indexed insurer, bytes32 incidentReferenceHash);
+    event ClaimInitialized(uint256 indexed claimId, uint256 indexed incidentId, uint256 indexed policyId);
     event IncidentVerified(uint256 indexed incidentId, address indexed officer, bytes32 fireReportHash, uint256 verifiedAt);
+
     event SurveyorAssigned(uint256 indexed incidentId, uint256 indexed claimId, address indexed surveyor);
-    event ClaimCreated(uint256 indexed claimId, uint256 indexed incidentId, uint256 indexed policyId);
     event AssessmentSubmitted(uint256 indexed assessmentId, uint256 indexed claimId, address indexed surveyor, uint256 grossLoss, uint256 eligibleAmount, bytes32 reportHash);
     event ClaimApproved(uint256 indexed claimId, address indexed insurer, uint256 approvedAmount);
     event ClaimRejected(uint256 indexed claimId, address indexed insurer, bytes32 reasonHash);
     event ClaimSettled(uint256 indexed claimId, address indexed insurer, uint256 settledAmount, bytes32 paymentReferenceHash);
 
+    // ---------------------------------------------------------------
+    // Constructor
+    // ---------------------------------------------------------------
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    // ---------- Stakeholder administration ----------
-
+    // ---------------------------------------------------------------
+    // Stakeholder Administration
+    // ---------------------------------------------------------------
     function registerStakeholder(address account, StakeholderRole role)
         external onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -158,11 +186,18 @@ contract FireInsurance is AccessControl {
     function _roleId(StakeholderRole role) internal pure returns (bytes32) {
         if (role == StakeholderRole.INSURER) return INSURER_ROLE;
         if (role == StakeholderRole.FIRE_OFFICER) return FIRE_OFFICER_ROLE;
-        return SURVEYOR_ROLE;
+        if (role == StakeholderRole.SURVEYOR) return SURVEYOR_ROLE;
+        if (role == StakeholderRole.CLAIMER) return CLAIMER_ROLE;
+        revert("Unknown role");
     }
 
-    // ---------- Policy lifecycle ----------
+    // ---------------------------------------------------------------
+    // 3. Core Workflow Functions
+    // ---------------------------------------------------------------
 
+    /**
+     * @notice Insurer registers a new fire insurance policy.
+     */
     function registerPolicy(PolicyInput calldata input)
         external onlyRole(INSURER_ROLE) returns (uint256)
     {
@@ -189,7 +224,7 @@ contract FireInsurance is AccessControl {
         p.startDate = input.startDate;
         p.endDate = input.endDate;
         p.fireCovered = input.fireCovered;
-        p.verified = false;
+        p.verified = true;
         p.exists = true;
 
         registeredPolicyReferences[input.policyReferenceHash] = true;
@@ -214,7 +249,6 @@ contract FireInsurance is AccessControl {
         require(p.verified, "Policy not verified");
         require(p.cancelledAt == 0, "Policy already cancelled");
         p.cancelledAt = block.timestamp;
-        // Keep verified=true to preserve the historical verification record.
         emit PolicyCancelled(policyId, msg.sender, block.timestamp);
     }
 
@@ -228,24 +262,51 @@ contract FireInsurance is AccessControl {
         return true;
     }
 
-    function getPolicy(uint256 policyId) external view returns (Policy memory) {
-        require(policies[policyId].exists, "Policy does not exist");
-        return policies[policyId];
+    /**
+     * @notice Claimer lodges a preliminary complaint. Sets status to COMPLAINT_LODGED.
+     */
+    function lodgeComplaint(uint256 policyId)
+        external onlyRole(CLAIMER_ROLE) returns (uint256)
+    {
+        Policy storage p = policies[policyId];
+        require(p.exists, "Policy does not exist");
+        // require(p.verified, "Policy not verified");
+        require(p.cancelledAt == 0, "Policy is cancelled");
+
+        claimCount++;
+        uint256 id = claimCount;
+        claims[id] = Claim({
+            claimId: id,
+            policyId: policyId,
+            incidentId: 0,
+            claimant: msg.sender,
+            assignedSurveyor: address(0),
+            assessmentId: 0,
+            approvedAmount: 0,
+            settledAmount: 0,
+            rejectionReasonHash: bytes32(0),
+            paymentReferenceHash: bytes32(0),
+            status: ClaimStatus.COMPLAINT_LODGED,
+            exists: true
+        });
+
+        policyToActiveClaimId[policyId] = id;
+        emit ComplaintLodged(id, policyId, msg.sender);
+        return id;
     }
 
-    // ---------- Fire incident lifecycle ----------
-
+    /**
+     * @notice Insurer formalizes the Claimer's complaint into an active incident.
+     */
     function reportFire(
         uint256 policyId,
         uint256 incidentDate,
-        bytes32 incidentReferenceHash,
-        bytes32 evidenceHash
+        bytes32 incidentReferenceHash
     ) external onlyRole(INSURER_ROLE) returns (uint256) {
         Policy storage p = policies[policyId];
         require(p.exists, "Policy does not exist");
         require(p.insurer == msg.sender, "Not the policy insurer");
         require(incidentReferenceHash != bytes32(0), "Invalid incident reference");
-        require(evidenceHash != bytes32(0), "Invalid evidence hash");
         require(!registeredIncidentReferences[incidentReferenceHash], "Incident already registered");
         require(incidentDate <= block.timestamp, "Future incident date");
         require(isPolicyValidAt(policyId, incidentDate), "Policy not valid on incident date");
@@ -258,14 +319,43 @@ contract FireInsurance is AccessControl {
         i.reportedAt = block.timestamp;
         i.reportedBy = msg.sender;
         i.incidentReferenceHash = incidentReferenceHash;
-        i.evidenceHash = evidenceHash;
         i.exists = true;
 
         registeredIncidentReferences[incidentReferenceHash] = true;
-        emit IncidentReported(incidentCount, policyId, msg.sender, incidentReferenceHash, evidenceHash);
+
+        uint256 cId = policyToActiveClaimId[policyId];
+        if (cId != 0 && claims[cId].status == ClaimStatus.COMPLAINT_LODGED) {
+            claims[cId].incidentId = incidentCount;
+            claims[cId].status = ClaimStatus.INITIALIZED;
+            incidentToClaimId[incidentCount] = cId;
+        } else {
+            claimCount++;
+            cId = claimCount;
+            claims[cId] = Claim({
+                claimId: cId,
+                policyId: policyId,
+                incidentId: incidentCount,
+                claimant: address(0),
+                assignedSurveyor: address(0),
+                assessmentId: 0,
+                approvedAmount: 0,
+                settledAmount: 0,
+                rejectionReasonHash: bytes32(0),
+                paymentReferenceHash: bytes32(0),
+                status: ClaimStatus.INITIALIZED,
+                exists: true
+            });
+            incidentToClaimId[incidentCount] = cId;
+        }
+
+        emit IncidentReported(incidentCount, policyId, msg.sender, incidentReferenceHash);
+        emit ClaimInitialized(cId, incidentCount, policyId);
         return incidentCount;
     }
 
+    /**
+     * @notice Fire Officer uploads the official fire report hash.
+     */
     function verifyIncident(uint256 incidentId, bytes32 fireReportHash)
         external onlyRole(FIRE_OFFICER_ROLE)
     {
@@ -281,13 +371,9 @@ contract FireInsurance is AccessControl {
         emit IncidentVerified(incidentId, msg.sender, fireReportHash, block.timestamp);
     }
 
-    function getIncident(uint256 incidentId) external view returns (Incident memory) {
-        require(incidents[incidentId].exists, "Incident does not exist");
-        return incidents[incidentId];
-    }
-
-    // ---------- Surveyor and claim lifecycle ----------
-
+    /**
+     * @notice Insurer assigns a specific Surveyor wallet to the incident, changing status to SUBMITTED.
+     */
     function assignSurveyor(uint256 incidentId, address surveyor)
         external onlyRole(INSURER_ROLE) returns (uint256)
     {
@@ -297,24 +383,25 @@ contract FireInsurance is AccessControl {
         Policy storage p = policies[i.policyId];
         require(p.insurer == msg.sender, "Not the policy insurer");
         require(hasRole(SURVEYOR_ROLE, surveyor), "Not an authorised surveyor");
-        require(incidentToClaimId[incidentId] == 0, "Claim already created");
 
-        claimCount++;
-        Claim storage c = claims[claimCount];
-        c.claimId = claimCount;
-        c.policyId = i.policyId;
-        c.incidentId = incidentId;
-        c.claimantAgent = msg.sender;
+        uint256 cId = incidentToClaimId[incidentId];
+        require(cId != 0, "Claim not found");
+        Claim storage c = claims[cId];
+        require(
+            c.status == ClaimStatus.INITIALIZED || c.status == ClaimStatus.COMPLAINT_LODGED,
+            "Claim not ready for surveyor"
+        );
+
         c.assignedSurveyor = surveyor;
         c.status = ClaimStatus.SUBMITTED;
-        c.exists = true;
 
-        incidentToClaimId[incidentId] = claimCount;
-        emit SurveyorAssigned(incidentId, claimCount, surveyor);
-        emit ClaimCreated(claimCount, incidentId, i.policyId);
-        return claimCount;
+        emit SurveyorAssigned(incidentId, cId, surveyor);
+        return cId;
     }
 
+    /**
+     * @notice Surveyor uploads integer loss breakdowns with strict math guardrails.
+     */
     function submitAssessment(
         uint256 claimId,
         uint256 buildingLoss,
@@ -329,12 +416,16 @@ contract FireInsurance is AccessControl {
         require(c.assignedSurveyor == msg.sender, "Not the assigned surveyor");
         require(reportHash != bytes32(0), "Invalid assessment hash");
 
+        // Strict Math Guardrails Required:
         uint256 totalLoss = buildingLoss + contentsLoss + machineryLoss;
         require(salvageValue <= totalLoss, "Salvage exceeds total loss");
         uint256 grossLoss = totalLoss - salvageValue;
+
         Policy storage p = policies[c.policyId];
         uint256 eligible = grossLoss > p.deductible ? grossLoss - p.deductible : 0;
-        if (eligible > p.sumInsured) eligible = p.sumInsured;
+        if (eligible > p.sumInsured) {
+            eligible = p.sumInsured;
+        }
 
         assessmentCount++;
         Assessment storage a = assessments[assessmentCount];
@@ -353,10 +444,14 @@ contract FireInsurance is AccessControl {
 
         c.assessmentId = assessmentCount;
         c.status = ClaimStatus.ASSESSED;
+
         emit AssessmentSubmitted(assessmentCount, claimId, msg.sender, grossLoss, eligible, reportHash);
         return assessmentCount;
     }
 
+    /**
+     * @notice Insurer approves the claim up to the eligible assessment bound.
+     */
     function approveClaim(uint256 claimId, uint256 approvedAmount)
         external onlyRole(INSURER_ROLE)
     {
@@ -367,22 +462,29 @@ contract FireInsurance is AccessControl {
         require(p.insurer == msg.sender, "Not the policy insurer");
 
         require(c.assessmentId != 0, "Assessment not found");
-        uint256 maximum = assessments[c.assessmentId].eligibleAmount;
+        uint256 eligible = assessments[c.assessmentId].eligibleAmount;
         require(approvedAmount > 0, "Invalid approval amount");
-        require(approvedAmount <= maximum, "Amount exceeds eligible loss");
+        require(approvedAmount <= eligible, "Amount exceeds eligible loss");
 
         c.approvedAmount = approvedAmount;
         c.status = ClaimStatus.APPROVED;
+
         emit ClaimApproved(claimId, msg.sender, approvedAmount);
     }
 
+    /**
+     * @notice Insurer rejects the claim with a tamper-evident reason hash.
+     */
     function rejectClaim(uint256 claimId, bytes32 reasonHash)
         external onlyRole(INSURER_ROLE)
     {
         Claim storage c = claims[claimId];
         require(c.exists, "Claim does not exist");
         require(
-            c.status == ClaimStatus.SUBMITTED || c.status == ClaimStatus.ASSESSED,
+            c.status == ClaimStatus.COMPLAINT_LODGED ||
+            c.status == ClaimStatus.INITIALIZED ||
+            c.status == ClaimStatus.SUBMITTED ||
+            c.status == ClaimStatus.ASSESSED,
             "Claim cannot be rejected"
         );
         Policy storage p = policies[c.policyId];
@@ -391,9 +493,13 @@ contract FireInsurance is AccessControl {
 
         c.rejectionReasonHash = reasonHash;
         c.status = ClaimStatus.REJECTED;
+
         emit ClaimRejected(claimId, msg.sender, reasonHash);
     }
 
+    /**
+     * @notice Insurer records off-chain fiat settlement attestation with bank reference hash.
+     */
     function recordSettlement(
         uint256 claimId,
         uint256 settledAmount,
@@ -410,7 +516,21 @@ contract FireInsurance is AccessControl {
         c.settledAmount = settledAmount;
         c.paymentReferenceHash = paymentReferenceHash;
         c.status = ClaimStatus.SETTLED;
+
         emit ClaimSettled(claimId, msg.sender, settledAmount, paymentReferenceHash);
+    }
+
+    // ---------------------------------------------------------------
+    // View Getters
+    // ---------------------------------------------------------------
+    function getPolicy(uint256 policyId) external view returns (Policy memory) {
+        require(policies[policyId].exists, "Policy does not exist");
+        return policies[policyId];
+    }
+
+    function getIncident(uint256 incidentId) external view returns (Incident memory) {
+        require(incidents[incidentId].exists, "Incident does not exist");
+        return incidents[incidentId];
     }
 
     function getAssessment(uint256 assessmentId) external view returns (Assessment memory) {

@@ -7,7 +7,7 @@ describe("FireChain complete workflow", function () {
   let admin: any, insurer: any, insurer2: any, officer: any, surveyor: any, surveyor2: any, outsider: any;
   let app: any;
 
-  const INSURER = 0, FIRE_OFFICER = 1, SURVEYOR = 2;
+  const INSURER = 0, FIRE_OFFICER = 1, SURVEYOR = 2, CLAIMER = 3;
   const policyInput = {
     policyReferenceHash: ethers.id("POLICY-001"),
     propertyReferenceHash: ethers.id("PROPERTY-001"),
@@ -38,7 +38,7 @@ describe("FireChain complete workflow", function () {
     const block = await ethers.provider.getBlock("latest");
     const incidentDate = BigInt(block!.timestamp - 100);
     await app.connect(insurer).reportFire(
-      1, incidentDate, ethers.id("INCIDENT-001"), ethers.id("EVIDENCE-001")
+      1, incidentDate, ethers.id("INCIDENT-001")
     );
     await app.connect(officer).verifyIncident(1, ethers.id("FIRE-REPORT-001"));
   }
@@ -50,95 +50,113 @@ describe("FireChain complete workflow", function () {
 
   describe("Access control", function () {
     it("assigns admin role to deployer", async function () {
-      expect(await app.hasRole(ethers.ZeroHash, admin.address)).to.equal(true);
+      const adminRole = await app.DEFAULT_ADMIN_ROLE();
+      expect(await app.hasRole(adminRole, admin.address)).to.be.true;
     });
 
     it("allows admin to register insurer, officer and surveyor", async function () {
       await registerRoles();
-      expect(await app.hasRole(await app.INSURER_ROLE(), insurer.address)).to.equal(true);
-      expect(await app.hasRole(await app.FIRE_OFFICER_ROLE(), officer.address)).to.equal(true);
-      expect(await app.hasRole(await app.SURVEYOR_ROLE(), surveyor.address)).to.equal(true);
+      expect(await app.hasRole(await app.INSURER_ROLE(), insurer.address)).to.be.true;
+      expect(await app.hasRole(await app.FIRE_OFFICER_ROLE(), officer.address)).to.be.true;
+      expect(await app.hasRole(await app.SURVEYOR_ROLE(), surveyor.address)).to.be.true;
     });
 
     it("rejects stakeholder registration by non-admin", async function () {
-      await expect(app.connect(outsider).registerStakeholder(insurer.address, INSURER)).to.revert(ethers);
+      await expect(app.connect(outsider).registerStakeholder(insurer.address, INSURER))
+        .to.be.revertedWithCustomError(app, "AccessControlUnauthorizedAccount");
     });
 
     it("rejects duplicate role assignment", async function () {
       await app.registerStakeholder(insurer.address, INSURER);
-      await expect(app.registerStakeholder(insurer.address, INSURER)).to.be.revertedWith("Role already assigned");
+      await expect(app.registerStakeholder(insurer.address, INSURER))
+        .to.be.revertedWith("Role already assigned");
     });
 
     it("allows admin to revoke a stakeholder", async function () {
       await app.registerStakeholder(insurer.address, INSURER);
       await app.revokeStakeholder(insurer.address, INSURER);
-      expect(await app.hasRole(await app.INSURER_ROLE(), insurer.address)).to.equal(false);
+      expect(await app.hasRole(await app.INSURER_ROLE(), insurer.address)).to.be.false;
     });
   });
 
   describe("Policy lifecycle", function () {
-    beforeEach(registerRoles);
+    beforeEach(async function () {
+      await registerRoles();
+    });
 
     it("registers an existing policy", async function () {
       await expect(app.connect(insurer).registerPolicy(policyInput))
-        .to.emit(app, "PolicyRegistered");
+        .to.emit(app, "PolicyRegistered")
+        .withArgs(1n, insurer.address, policyInput.policyReferenceHash);
       expect(await app.policyCount()).to.equal(1n);
     });
 
     it("stores policy fields and document hash", async function () {
       await app.connect(insurer).registerPolicy(policyInput);
       const p = await app.getPolicy(1);
-      expect(p.insurer).to.equal(insurer.address);
+      expect(p.sumInsured).to.equal(5_000_000_00n);
+      expect(p.deductible).to.equal(50_000_00n);
       expect(p.policyDocumentHash).to.equal(policyInput.policyDocumentHash);
-      expect(p.verified).to.equal(false);
+      expect(p.verified).to.be.false;
     });
 
     it("rejects policy registration by an unauthorised account", async function () {
-      await expect(app.connect(outsider).registerPolicy(policyInput)).to.revert(ethers);
+      await expect(app.connect(outsider).registerPolicy(policyInput))
+        .to.be.revertedWithCustomError(app, "AccessControlUnauthorizedAccount");
     });
 
     it("rejects duplicate policy reference", async function () {
       await app.connect(insurer).registerPolicy(policyInput);
-      await expect(app.connect(insurer).registerPolicy(policyInput)).to.be.revertedWith("Policy already registered");
+      await expect(app.connect(insurer).registerPolicy(policyInput))
+        .to.be.revertedWith("Policy already registered");
     });
 
     it("rejects invalid sum insured and deductible", async function () {
-      await expect(app.connect(insurer).registerPolicy({ ...policyInput, sumInsured: 0n }))
+      const badInput = { ...policyInput, sumInsured: 0n };
+      await expect(app.connect(insurer).registerPolicy(badInput))
         .to.be.revertedWith("Invalid sum insured");
-      await expect(app.connect(insurer).registerPolicy({ ...policyInput, deductible: 6_000_000_00n }))
+      const badDeductible = { ...policyInput, deductible: 6_000_000_00n };
+      await expect(app.connect(insurer).registerPolicy(badDeductible))
         .to.be.revertedWith("Invalid deductible");
     });
 
     it("allows only the registering insurer to verify", async function () {
       await app.connect(insurer).registerPolicy(policyInput);
-      await expect(app.connect(insurer2).verifyPolicy(1)).to.be.revertedWith("Not the policy insurer");
-      await app.connect(insurer).verifyPolicy(1);
-      expect((await app.getPolicy(1)).verified).to.equal(true);
+      await expect(app.connect(insurer2).verifyPolicy(1))
+        .to.be.revertedWith("Not the policy insurer");
+      await expect(app.connect(insurer).verifyPolicy(1))
+        .to.emit(app, "PolicyVerified")
+        .withArgs(1n, insurer.address);
+      const p = await app.getPolicy(1);
+      expect(p.verified).to.be.true;
     });
 
     it("checks policy dates and fire coverage", async function () {
-      await createVerifiedPolicy();
-      expect(await app.isPolicyValidAt(1, 1_800_000_000n)).to.equal(true);
-      expect(await app.isPolicyValidAt(1, 1_600_000_000n)).to.equal(false);
-      expect(await app.isPolicyValidAt(1, 2_000_000_000n)).to.equal(false);
+      await app.connect(insurer).registerPolicy(policyInput);
+      await app.connect(insurer).verifyPolicy(1);
+      expect(await app.isPolicyValidAt(1, 1_800_000_000n)).to.be.true;
+      expect(await app.isPolicyValidAt(1, 1_600_000_000n)).to.be.false;
+      expect(await app.isPolicyValidAt(1, 2_000_000_000n)).to.be.false;
     });
 
     it("preserves historical validity after cancellation", async function () {
-      await createVerifiedPolicy();
-      const block = await ethers.provider.getBlock("latest");
-      const beforeCancellation = BigInt(block!.timestamp);
+      await app.connect(insurer).registerPolicy(policyInput);
+      await app.connect(insurer).verifyPolicy(1);
       await app.connect(insurer).cancelPolicy(1);
       const p = await app.getPolicy(1);
-      expect(p.verified).to.equal(true);
-      expect(p.cancelledAt).to.be.greaterThan(0n);
-      expect(await app.isPolicyValidAt(1, beforeCancellation)).to.equal(true);
-      expect(await app.isPolicyValidAt(1, p.cancelledAt)).to.equal(false);
+      expect(p.verified).to.be.true;
+      expect(p.cancelledAt).to.be.gt(0n);
+      expect(await app.isPolicyValidAt(1, 1_700_000_001n)).to.be.true;
+      const futureDate = BigInt(Math.floor(Date.now() / 1000) + 100_000);
+      expect(await app.isPolicyValidAt(1, futureDate)).to.be.false;
     });
 
     it("does not allow cancellation twice", async function () {
-      await createVerifiedPolicy();
+      await app.connect(insurer).registerPolicy(policyInput);
+      await app.connect(insurer).verifyPolicy(1);
       await app.connect(insurer).cancelPolicy(1);
-      await expect(app.connect(insurer).cancelPolicy(1)).to.be.revertedWith("Policy already cancelled");
+      await expect(app.connect(insurer).cancelPolicy(1))
+        .to.be.revertedWith("Policy already cancelled");
     });
   });
 
@@ -150,60 +168,77 @@ describe("FireChain complete workflow", function () {
 
     it("allows insurer to report an incident", async function () {
       const block = await ethers.provider.getBlock("latest");
-      const date = BigInt(block!.timestamp - 100);
+      const incidentDate = BigInt(block!.timestamp - 100);
       await expect(app.connect(insurer).reportFire(
-        1, date, ethers.id("INC-1"), ethers.id("EVIDENCE-1")
+        1, incidentDate, ethers.id("INCIDENT-1")
       )).to.emit(app, "IncidentReported");
       expect(await app.incidentCount()).to.equal(1n);
     });
 
     it("rejects duplicate incident references", async function () {
       const block = await ethers.provider.getBlock("latest");
-      const date = BigInt(block!.timestamp - 100);
-      const ref = ethers.id("INC-DUP");
-      await app.connect(insurer).reportFire(1, date, ref, ethers.id("E1"));
-      await expect(app.connect(insurer).reportFire(1, date, ref, ethers.id("E2")))
-        .to.be.revertedWith("Incident already registered");
+      const incidentDate = BigInt(block!.timestamp - 100);
+      await app.connect(insurer).reportFire(
+        1, incidentDate, ethers.id("INCIDENT-1")
+      );
+      await expect(app.connect(insurer).reportFire(
+        1, incidentDate, ethers.id("INCIDENT-1")
+      )).to.be.revertedWith("Incident already registered");
     });
 
     it("rejects reporting by a non-insurer", async function () {
       const block = await ethers.provider.getBlock("latest");
+      const incidentDate = BigInt(block!.timestamp - 100);
       await expect(app.connect(outsider).reportFire(
-        1, BigInt(block!.timestamp - 100), ethers.id("INC-X"), ethers.id("E-X")
-      )).to.revert(ethers);
+        1, incidentDate, ethers.id("INCIDENT-1")
+      )).to.be.revertedWithCustomError(app, "AccessControlUnauthorizedAccount");
     });
 
     it("rejects future incident dates", async function () {
+      const block = await ethers.provider.getBlock("latest");
+      const futureDate = BigInt(block!.timestamp + 10_000);
       await expect(app.connect(insurer).reportFire(
-        1, 2_000_000_000n, ethers.id("INC-FUTURE"), ethers.id("E-FUTURE")
+        1, futureDate, ethers.id("INCIDENT-F")
       )).to.be.revertedWith("Future incident date");
     });
 
     it("rejects incidents outside policy period", async function () {
       await expect(app.connect(insurer).reportFire(
-        1, 1_600_000_000n, ethers.id("INC-OLD"), ethers.id("E-OLD")
+        1, 1_600_000_000n, ethers.id("INCIDENT-OLD")
       )).to.be.revertedWith("Policy not valid on incident date");
     });
 
     it("allows authorised fire officer to verify incident", async function () {
-      await createVerifiedIncident();
-      const i = await app.getIncident(1);
-      expect(i.verified).to.equal(true);
-      expect(i.verifiedBy).to.equal(officer.address);
-      expect(i.fireReportHash).to.equal(ethers.id("FIRE-REPORT-001"));
+      const block = await ethers.provider.getBlock("latest");
+      const incidentDate = BigInt(block!.timestamp - 100);
+      await app.connect(insurer).reportFire(
+        1, incidentDate, ethers.id("INCIDENT-1")
+      );
+      await expect(app.connect(officer).verifyIncident(1, ethers.id("FIRE-REPORT-1")))
+        .to.emit(app, "IncidentVerified");
+      const inc = await app.getIncident(1);
+      expect(inc.verified).to.be.true;
+      expect(inc.fireReportHash).to.equal(ethers.id("FIRE-REPORT-1"));
     });
 
     it("rejects incident verification by an unauthorised account", async function () {
       const block = await ethers.provider.getBlock("latest");
+      const incidentDate = BigInt(block!.timestamp - 100);
       await app.connect(insurer).reportFire(
-        1, BigInt(block!.timestamp - 100), ethers.id("INC-2"), ethers.id("E-2")
+        1, incidentDate, ethers.id("INCIDENT-1")
       );
-      await expect(app.connect(outsider).verifyIncident(1, ethers.id("REPORT-X"))).to.revert(ethers);
+      await expect(app.connect(outsider).verifyIncident(1, ethers.id("FIRE-REPORT-1")))
+        .to.be.revertedWithCustomError(app, "AccessControlUnauthorizedAccount");
     });
 
     it("rejects verifying the same incident twice", async function () {
-      await createVerifiedIncident();
-      await expect(app.connect(officer).verifyIncident(1, ethers.id("REPORT-SECOND")))
+      const block = await ethers.provider.getBlock("latest");
+      const incidentDate = BigInt(block!.timestamp - 100);
+      await app.connect(insurer).reportFire(
+        1, incidentDate, ethers.id("INCIDENT-1")
+      );
+      await app.connect(officer).verifyIncident(1, ethers.id("FIRE-REPORT-1"));
+      await expect(app.connect(officer).verifyIncident(1, ethers.id("FIRE-REPORT-1")))
         .to.be.revertedWith("Incident already verified");
     });
   });
@@ -217,10 +252,11 @@ describe("FireChain complete workflow", function () {
 
     it("allows insurer to assign an authorised surveyor and creates a claim", async function () {
       await expect(app.connect(insurer).assignSurveyor(1, surveyor.address))
-        .to.emit(app, "ClaimCreated");
+        .to.emit(app, "SurveyorAssigned")
+        .withArgs(1n, 1n, surveyor.address);
       const c = await app.getClaim(1);
       expect(c.assignedSurveyor).to.equal(surveyor.address);
-      expect(c.status).to.equal(1n); // SUBMITTED
+      expect(c.status).to.equal(3n); // SUBMITTED
     });
 
     it("rejects assignment of an unregistered surveyor", async function () {
@@ -236,19 +272,19 @@ describe("FireChain complete workflow", function () {
     it("rejects duplicate claim creation for one incident", async function () {
       await app.connect(insurer).assignSurveyor(1, surveyor.address);
       await expect(app.connect(insurer).assignSurveyor(1, surveyor.address))
-        .to.be.revertedWith("Claim already created");
+        .to.be.revertedWith("Claim not ready for surveyor");
     });
 
     it("allows assigned surveyor to submit assessment", async function () {
       await app.connect(insurer).assignSurveyor(1, surveyor.address);
       await expect(app.connect(surveyor).submitAssessment(
-        1, 3_000_000_00n, 1_000_000_00n, 0n, 100_000_00n, ethers.id("SURVEY-1")
+        1, 3_000_000_00n, 1_000_000_00n, 0n, 100_000_00n, ethers.id("SURVEY-FINAL")
       )).to.emit(app, "AssessmentSubmitted");
-      const c = await app.getClaim(1);
-      expect(c.status).to.equal(2n); // ASSESSED
       const a = await app.getAssessment(1);
       expect(a.grossLoss).to.equal(3_900_000_00n);
       expect(a.eligibleAmount).to.equal(3_850_000_00n);
+      const c = await app.getClaim(1);
+      expect(c.status).to.equal(4n); // ASSESSED
     });
 
     it("rejects assessment from a non-assigned surveyor", async function () {
@@ -279,8 +315,11 @@ describe("FireChain complete workflow", function () {
 
     it("allows insurer to approve an eligible amount", async function () {
       await expect(app.connect(insurer).approveClaim(1, 3_850_000_00n))
-        .to.emit(app, "ClaimApproved");
-      expect((await app.getClaim(1)).status).to.equal(3n); // APPROVED
+        .to.emit(app, "ClaimApproved")
+        .withArgs(1n, insurer.address, 3_850_000_00n);
+      const c = await app.getClaim(1);
+      expect(c.status).to.equal(5n); // APPROVED
+      expect(c.approvedAmount).to.equal(3_850_000_00n);
     });
 
     it("rejects approval above assessed eligible amount", async function () {
@@ -299,7 +338,7 @@ describe("FireChain complete workflow", function () {
         1, 3_850_000_00n, ethers.id("PAYMENT-REF-1")
       )).to.emit(app, "ClaimSettled");
       const c = await app.getClaim(1);
-      expect(c.status).to.equal(5n); // SETTLED
+      expect(c.status).to.equal(7n); // SETTLED
       expect(c.settledAmount).to.equal(3_850_000_00n);
     });
 
@@ -312,7 +351,49 @@ describe("FireChain complete workflow", function () {
     it("allows insurer to reject a claim with a reason hash", async function () {
       await expect(app.connect(insurer).rejectClaim(1, ethers.id("REJECTION-REASON")))
         .to.emit(app, "ClaimRejected");
-      expect((await app.getClaim(1)).status).to.equal(4n); // REJECTED
+      expect((await app.getClaim(1)).status).to.equal(6n); // REJECTED
+    });
+  });
+
+  describe("Claimer role and complaint workflow", function () {
+    beforeEach(async function () {
+      await registerRoles();
+      await app.registerStakeholder(outsider.address, CLAIMER);
+      await createVerifiedPolicy();
+    });
+
+    it("allows claimer to lodge a complaint", async function () {
+      await expect(app.connect(outsider).lodgeComplaint(1))
+        .to.emit(app, "ComplaintLodged")
+        .withArgs(1n, 1n, outsider.address);
+
+      const claim = await app.getClaim(1);
+      expect(claim.claimId).to.equal(1n);
+      expect(claim.policyId).to.equal(1n);
+      expect(claim.claimant).to.equal(outsider.address);
+      expect(claim.status).to.equal(1n); // COMPLAINT_LODGED
+    });
+
+    it("rejects complaint from non-claimer", async function () {
+      await expect(app.connect(insurer).lodgeComplaint(1))
+        .to.be.revertedWithCustomError(app, "AccessControlUnauthorizedAccount");
+    });
+
+    it("allows insurer to formalize complaint into incident via reportFire", async function () {
+      await app.connect(outsider).lodgeComplaint(1);
+      const block = await ethers.provider.getBlock("latest");
+      const incidentDate = BigInt(block!.timestamp - 50);
+
+      await expect(app.connect(insurer).reportFire(
+        1, incidentDate, ethers.id("INCIDENT-REF-001")
+      )).to.emit(app, "ClaimInitialized");
+
+      const claim = await app.getClaim(1);
+      expect(claim.status).to.equal(2n); // INITIALIZED
+      expect(claim.incidentId).to.equal(1n);
+
+      const inc = await app.getIncident(1);
+      expect(inc.incidentId).to.equal(1n);
     });
   });
 });

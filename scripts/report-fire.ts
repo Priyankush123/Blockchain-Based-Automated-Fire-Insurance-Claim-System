@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import { network } from "hardhat";
 
@@ -42,10 +41,6 @@ async function main() {
     ethers.toUtf8Bytes("FIRECHAIN-INCIDENT-001")
   );
 
-  const evidenceHash = ethers.keccak256(
-    ethers.toUtf8Bytes("FIRECHAIN-FIRE-EVIDENCE-001")
-  );
-
   console.log("Insurer:", await insurer.getAddress());
   console.log("Policy ID:", policyId.toString());
   console.log("Incident date:", new Date(Number(incidentDate) * 1000).toISOString());
@@ -55,8 +50,7 @@ async function main() {
   const tx = await contract.reportFire(
     policyId,
     incidentDate,
-    incidentReferenceHash,
-    evidenceHash
+    incidentReferenceHash
   );
 
   console.log("Transaction submitted:", tx.hash);
@@ -68,7 +62,6 @@ async function main() {
   console.log("\nFire incident reported successfully!");
   console.log("Incident ID:", incidentCount.toString());
   console.log("Incident reference hash:", incidentReferenceHash);
-  console.log("Evidence hash:", evidenceHash);
 }
 
 main().catch((error) => {
