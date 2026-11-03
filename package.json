@@ -1,0 +1,45 @@
+{
+  "name": "firechain",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "register:stakeholders": "hardhat run scripts/register-stakeholders.ts --network localhost",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "hash": "tsx scripts/hash-document.ts",
+    "register:policy": "hardhat run scripts/register-policy.ts --network localhost",
+    "verify:policy": "hardhat run scripts/verify-policy.ts --network localhost",
+    "report:fire": "hardhat run scripts/report-fire.ts --network localhost",
+    "verify:incident": "hardhat run scripts/verify-incident.ts --network localhost",
+    "assign:surveyor": "hardhat run scripts/assign-surveyor.ts --network localhost",
+    "submit:assessment": "hardhat run scripts/submit-assessment.ts --network localhost",
+    "approve:claim": "hardhat run scripts/approve-claim.ts --network localhost",
+    "record:settlement": "hardhat run scripts/record-settlement.ts --network localhost",
+    "reject:claim": "hardhat run scripts/reject-claim.ts --network localhost",
+    "get:policy": "hardhat run scripts/get-policy.ts --network localhost",
+    "get:incident": "hardhat run scripts/get-incident.ts --network localhost",
+    "get:claim": "hardhat run scripts/get-claim.ts --network localhost",
+    "list:records": "hardhat run scripts/list-records.ts --network localhost",
+    "cancel:policy": "hardhat run scripts/cancel-policy.ts --network localhost",
+    "test:roles": "hardhat run scripts/test-roles.ts --network localhost",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.7",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.8.5",
+    "dotenv": "^16.4.5",
+    "hardhat": "^3.21.2",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "ethers": "^6.17.0"
+  }
+}
