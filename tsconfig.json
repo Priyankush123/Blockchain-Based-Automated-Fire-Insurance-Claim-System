@@ -1,11 +1,18 @@
 {
   "compilerOptions": {
-    "lib": ["es2023"],
-    "module": "node20",
-    "target": "es2023",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
-    "outDir": "dist",
-    "types": ["node"],
-    "verbatimModuleSyntax": true
-  }
+    "outDir": "dist"
+  },
+  "include": [
+    "./hardhat.config.ts",
+    "./scripts/**/*.ts",
+    "./test/**/*.ts"
+  ]
 }

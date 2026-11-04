@@ -1,191 +1,202 @@
-import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/Navbar';
-import { DashboardView } from './components/DashboardView';
-import { TelemetrySimulatorView } from './components/TelemetrySimulatorView';
-import { PoliciesView } from './components/PoliciesView';
-import { ClaimsView } from './components/ClaimsView';
-import { BlockchainLedgerView } from './components/BlockchainLedgerView';
-import { AIModelView } from './components/AIModelView';
-import { 
-  Policy, 
-  FireEventItem, 
-  Claim, 
-  HealthStatus, 
-  FireVerifyResponse 
-} from './types';
-import { 
-  fetchHealth, 
-  fetchPolicies, 
-  fetchFireEvents, 
-  fetchClaims 
-} from './services/api';
-import { Flame, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import React from "react";
+import { Web3Provider, useWeb3 } from "./context/Web3Context";
+import { Navbar } from "./components/Navbar";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import { ClaimerDashboard } from "./pages/ClaimerDashboard";
+import { InsurerDashboard } from "./pages/InsurerDashboard";
+import { FireOfficerDashboard } from "./pages/FireOfficerDashboard";
+import { SurveyorDashboard } from "./pages/SurveyorDashboard";
+import {
+  Wallet,
+  Lock,
+  Loader2,
+  AlertTriangle,
+  X,
+  ShieldAlert
+} from "lucide-react";
+import { shortenAddress } from "./utils/formatters";
 
-export function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [policies, setPolicies] = useState<Policy[]>([]);
-  const [fireEvents, setFireEvents] = useState<FireEventItem[]>([]);
-  const [claims, setClaims] = useState<Claim[]>([]);
-  const [health, setHealth] = useState<HealthStatus | null>(null);
-  const [selectedEventIdForClaim, setSelectedEventIdForClaim] = useState<string>('');
-  const [toastMessage, setToastMessage] = useState<{ title: string; text: string; type: 'success' | 'info' | 'error' } | null>(null);
+// -------------------------------------------------------------------
+// Main Shell with Protected Role-Based Routing
+// -------------------------------------------------------------------
 
-  // Contract Address deployed to local Hardhat node
-  const contractAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const MainContent: React.FC = () => {
+  const { account, userRole, connectWallet, isConnecting, loading, error, setError, contractAddress } = useWeb3();
 
-  const showToast = (title: string, text: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToastMessage({ title, text, type });
-    setTimeout(() => setToastMessage(null), 4000);
-  };
+  // Screen 1: Wallet Not Connected Landing Screen
+  if (!account) {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-orange-950/70 border border-orange-700/60 flex items-center justify-center mx-auto text-orange-500 shadow-xl shadow-orange-600/10">
+              <Wallet className="w-8 h-8 text-orange-400" />
+            </div>
 
-  const loadAllData = async () => {
-    try {
-      const [h, p, fe, c] = await Promise.allSettled([
-        fetchHealth(),
-        fetchPolicies(),
-        fetchFireEvents(),
-        fetchClaims()
-      ]);
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">Connect MetaMask</h2>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                FireChain requires Web3 wallet identity. Connect your MetaMask wallet to verify your role and access your authorized portal.
+              </p>
+            </div>
 
-      if (h.status === 'fulfilled') setHealth(h.value);
-      if (p.status === 'fulfilled') setPolicies(p.value);
-      if (fe.status === 'fulfilled') setFireEvents(fe.value);
-      if (c.status === 'fulfilled') setClaims(c.value);
-    } catch (e) {
-      console.error('Failed to load system data:', e);
+            {error && (
+              <div className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-xs text-left flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                <span className="font-mono break-all leading-normal">{error}</span>
+              </div>
+            )}
+
+            <button
+              onClick={connectWallet}
+              disabled={isConnecting}
+              className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-semibold text-sm transition shadow-lg shadow-orange-600/25 disabled:opacity-50 cursor-pointer"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Requesting MetaMask Approval...</span>
+                </>
+              ) : (
+                <>
+                  <Wallet className="w-4 h-4" />
+                  <span>Connect Wallet via MetaMask</span>
+                </>
+              )}
+            </button>
+
+            <div className="text-[11px] text-slate-500 pt-3 border-t border-slate-800/80">
+              Target Contract: <span className="font-mono text-slate-400">{shortenAddress(contractAddress)}</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Screen 2: Loading State — Validating Smart Contract Roles On-Chain
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-10 h-10 animate-spin text-orange-500 mx-auto" />
+            <p className="text-sm font-medium text-slate-300">
+              Validating smart contract role permissions on-chain...
+            </p>
+            <p className="text-xs font-mono text-slate-500">
+              Connected: {shortenAddress(account)}
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Screen 3: Strict Unauthorized Screen (userRole === 'NONE')
+  if (userRole === "NONE") {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-lg w-full bg-slate-900 border border-rose-900/60 rounded-3xl p-8 text-center shadow-2xl space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-rose-950/70 border border-rose-800 flex items-center justify-center mx-auto text-rose-400">
+              <Lock className="w-8 h-8" />
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">Unauthorized Access</h2>
+              <p className="text-xs text-rose-300 mt-1 font-mono font-semibold">
+                Your wallet is not registered on-chain
+              </p>
+              <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+                Connected address <span className="font-mono text-slate-200 bg-slate-800 px-2 py-0.5 rounded">{account}</span> does not possess any authorized stakeholder role (Admin, Insurer, Fire Officer, Surveyor, or Claimer) on smart contract <span className="font-mono text-slate-200">{shortenAddress(contractAddress)}</span>.
+              </p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 text-left text-xs text-slate-400 space-y-2">
+              <div className="font-semibold text-slate-300 flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4 text-amber-400" />
+                Resolution:
+              </div>
+              <p>
+                To access this decentralized system, an Admin must register your wallet address using the <code className="text-slate-300 font-mono">registerStakeholder</code> function.
+              </p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Screen 4: Conditionally Render Strictly Authorized Dashboard
+  const renderDashboardByRole = () => {
+    switch (userRole) {
+      case "ADMIN":
+        return <AdminDashboard />;
+      case "INSURER":
+        return <InsurerDashboard />;
+      case "FIRE_OFFICER":
+        return <FireOfficerDashboard />;
+      case "SURVEYOR":
+        return <SurveyorDashboard />;
+      case "CLAIMER":
+        return <ClaimerDashboard />;
+      default:
+        return null;
     }
-  };
-
-  useEffect(() => {
-    loadAllData();
-    const interval = setInterval(loadAllData, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleVerificationSuccess = (res: FireVerifyResponse) => {
-    loadAllData();
-    if (res.verification_status === 'CONFIRMED_FIRE') {
-      showToast(
-        'Fire Verified & Recorded On-Chain!',
-        `Tx Hash: ${res.blockchain.tx_hash.slice(0, 10)}... Event ID: ${res.blockchain.event_id.slice(0, 8)}...`,
-        'success'
-      );
-    } else {
-      showToast(
-        `Arbitration: ${res.verification_status}`,
-        res.verification.reason,
-        'info'
-      );
-    }
-  };
-
-  const handleProceedToClaim = (eventId: string) => {
-    setSelectedEventIdForClaim(eventId);
-    setActiveTab('claims');
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
-      {/* Navbar Header */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        health={health}
-        contractAddress={contractAddress}
-      />
+    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+      <Navbar />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            policies={policies}
-            fireEvents={fireEvents}
-            claims={claims}
-            health={health}
-            setActiveTab={setActiveTab}
-            onSelectEventForClaim={handleProceedToClaim}
-          />
-        )}
-
-        {activeTab === 'simulator' && (
-          <TelemetrySimulatorView
-            onVerificationSuccess={handleVerificationSuccess}
-            onProceedToClaim={handleProceedToClaim}
-          />
-        )}
-
-        {activeTab === 'policies' && (
-          <PoliciesView
-            policies={policies}
-            onRefresh={loadAllData}
-          />
-        )}
-
-        {activeTab === 'claims' && (
-          <ClaimsView
-            claims={claims}
-            fireEvents={fireEvents}
-            policies={policies}
-            selectedEventId={selectedEventIdForClaim}
-            onRefresh={loadAllData}
-          />
-        )}
-
-        {activeTab === 'blockchain' && (
-          <BlockchainLedgerView
-            contractAddress={contractAddress}
-            fireEvents={fireEvents}
-          />
-        )}
-
-        {activeTab === 'ai' && (
-          <AIModelView />
-        )}
-      </main>
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slideUp">
-          <div className={`flex items-start space-x-3 p-4 rounded-xl border shadow-2xl backdrop-blur-md ${
-            toastMessage.type === 'success' 
-              ? 'bg-emerald-950/90 border-emerald-500/50 text-white' 
-              : toastMessage.type === 'error'
-              ? 'bg-rose-950/90 border-rose-500/50 text-white'
-              : 'bg-slate-900/90 border-slate-700 text-white'
-          }`}>
-            {toastMessage.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            )}
-            <div>
-              <div className="text-xs font-bold">{toastMessage.title}</div>
-              <div className="text-[11px] text-slate-300 font-mono mt-0.5">{toastMessage.text}</div>
-            </div>
+      {/* Global Error Banner */}
+      {error && (
+        <div className="bg-rose-950/90 border-b border-rose-800 text-rose-200 px-4 py-3 flex items-center justify-between text-xs sticky top-16 z-40 backdrop-blur">
+          <div className="flex items-center gap-2 max-w-4xl">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span className="font-mono break-all">{error}</span>
           </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-rose-400 hover:text-rose-200 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
+      {/* Main Role Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {renderDashboardByRole()}
+      </main>
+
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-[#070a12] py-6 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center space-x-2">
-            <Flame className="w-4 h-4 text-orange-500" />
-            <span className="font-semibold text-slate-400">PyroAegis Protocol</span>
-            <span>&bull;</span>
-            <span>Blockchain-Based Automated Fire Insurance Claim System</span>
+      <footer className="border-t border-slate-900 bg-slate-950/80 py-6 text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            FireChain &copy; 2026 — Decentralized Fire Insurance Claims Protocol.
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="font-mono text-[11px] text-slate-400">
-              Contract: {contractAddress.slice(0, 8)}...{contractAddress.slice(-6)}
-            </span>
-            <span>&bull;</span>
-            <span>FastAPI + Solidity + Web3.py + Random Forest</span>
+          <div className="flex items-center gap-4">
+            <span>Solidity ^0.8.24</span>
+            <span>•</span>
+            <span>Ethers.js v6</span>
+            <span>•</span>
+            <span>OpenZeppelin AccessControl</span>
           </div>
         </div>
       </footer>
     </div>
   );
-}
+};
 
-export default App;
+export default function App() {
+  return (
+    <Web3Provider>
+      <MainContent />
+    </Web3Provider>
+  );
+}
