@@ -1,4 +1,4 @@
-# FireChain — Decentralized Fire Insurance Claims Workflow Prototype
+# FireChain — Decentralized Fire Insurance Claims Workflow Platform
 
 [![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.24-363636?logo=solidity)](https://soliditylang.org/)
 [![Hardhat](https://img.shields.io/badge/Hardhat-v3.21.2-yellow?logo=ethereum)](https://hardhat.org/)
@@ -9,11 +9,11 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**FireChain** is an enterprise-oriented smart contract prototype engineered on Ethereum. It provides a transparent, verifiable, and tamper-resistant workflow for fire insurance policy lifecycle management, citizen complaint lodging, civic fire incident verification, independent loss assessment, and claim settlements.
+**FireChain** is an enterprise-grade decentralized insurance protocol and DApp engineered on Ethereum. It provides a transparent, verifiable, and tamper-resistant workflow for fire insurance policy underwriting, citizen complaint lodging, civic fire incident verification, independent loss assessment, and bank settlement attestations.
 
-The architecture adopts an **off-chain document storage, on-chain cryptographic fingerprint ("Hash-on-Chain")** model. Sensitive original documents (policy contracts, evidence photos, fire department reports, and surveyor loss assessments) remain securely stored in local infrastructure, while immutable 32-byte SHA-256 / Keccak-256 hashes, timestamps, and multi-party attestations are recorded on the blockchain.
+The platform employs an **off-chain document storage with on-chain cryptographic fingerprinting ("Hash-on-Chain")** model. Sensitive original documents (policy contracts, evidence photos, fire department investigation reports, and surveyor loss assessments) remain securely stored in local infrastructure, while immutable 32-byte SHA-256 / Keccak-256 hashes, timestamps, and multi-party attestations are recorded on the blockchain.
 
-The project features both a **full CLI automation script suite** and an **interactive Web UI / DApp dashboard** powered by real MetaMask Web3 authentication and strict on-chain role enforcement.
+The platform includes a **complete CLI automation suite** and a **modern, role-based Web3 React DApp** featuring real MetaMask authentication, strict on-chain role enforcement, real-time dynamic notification queues, and an integrated blockchain policy ledger visualizer.
 
 ---
 
@@ -25,7 +25,14 @@ The project features both a **full CLI automation script suite** and an **intera
   - [Multi-Party End-to-End Sequence Diagram](#multi-party-end-to-end-sequence-diagram)
   - [Claim Lifecycle State Machine (8 States)](#claim-lifecycle-state-machine-8-states)
 - [Stakeholders & 5 On-Chain Roles](#stakeholders--5-on-chain-roles)
-- [Interactive Web UI / DApp Dashboard](#interactive-web-ui--dapp-dashboard)
+- [Interactive Web UI / Role Dashboards](#interactive-web-ui--role-dashboards)
+  - [1. Insurer Desk & Dynamic Workflow Queue](#1-insurer-desk--dynamic-workflow-queue)
+  - [2. Blockchain Policy Ledger Visualizer](#2-blockchain-policy-ledger-visualizer)
+  - [3. Claimer Portal & Simplified Complaint Flow](#3-claimer-portal--simplified-complaint-flow)
+  - [4. Fire Officer Civic Oracle & Offline Auto-Hashing](#4-fire-officer-civic-oracle--offline-auto-hashing)
+  - [5. Surveyor Assessment with Mathematical Guardrails](#5-surveyor-assessment-with-mathematical-guardrails)
+  - [6. Admin Governance & RBAC Portal](#6-admin-governance--rbac-portal)
+  - [7. TransactionReceipt Block Finality Visualizer](#7-transactionreceipt-block-finality-visualizer)
 - [Mathematical Loss & Claim Calculation](#mathematical-loss--claim-calculation)
 - [Repository Directory Structure](#repository-directory-structure)
 - [Prerequisites & Environment Setup](#prerequisites--environment-setup)
@@ -34,10 +41,8 @@ The project features both a **full CLI automation script suite** and an **intera
   - [2. Start Local Node & Deploy](#2-start-local-node--deploy)
   - [3. End-to-End Claims Workflow](#3-end-to-end-claims-workflow)
   - [4. Query & Verification Commands](#4-query--verification-commands)
-  - [5. Alternative Paths (Rejection & Cancellation)](#5-alternative-paths-rejection--cancellation)
-  - [6. Local Document Hashing Utility](#6-local-document-hashing-utility)
-- [Sepolia Testnet Deployment](#sepolia-testnet-deployment)
 - [Security, Privacy & Prototype Limitations](#security-privacy--prototype-limitations)
+- [License](#license)
 
 ---
 
@@ -67,11 +72,12 @@ Open **`http://localhost:5173`** in your browser to access the FireChain dashboa
 ## Key Architecture & Design Principles
 
 1. **Hash-on-Chain Privacy**: Public blockchains are transparent. To protect policyholders and prevent GDPR/privacy violations, no personally identifiable information (PII), names, phone numbers, or confidential documents are written to the contract. Only cryptographic hashes (`bytes32`) serve as tamper-evident proofs.
-2. **Citizen Complaint Lodging**: Claimants holding `CLAIMER_ROLE` initiate claims directly on-chain by lodging a preliminary complaint (`lodgeComplaint`) with photographic damage evidence hashes before insurers formalize incidents.
-3. **Real-World Oracles & Separation of Duties**: Real-world authorized actors (Civic Fire Officers and Independent Surveyors) act as attestors / oracles to independently authenticate incidents and quantify physical loss before any claim approval.
-4. **Strict Integer Loss Bounds**: Integer arithmetic denominated in **INR paise** (₹1 = 100 paise) prevents floating-point inaccuracies. Total loss and salvage guardrails (`salvageValue <= totalLoss`) are strictly verified on-chain.
-5. **No Direct Token/Fiat Custody**: Settlements are recorded as insurer attestations linked to off-chain bank payment transaction hashes (NEFT / RTGS / UTR). The contract does not transfer ETH or fiat.
-6. **Real Web3 Authentication**: No simulated Web2 credentials or fake personas. Users authenticate directly via MetaMask, and dashboard access is strictly governed by the on-chain `hasRole()` smart contract response.
+2. **Single-Active-Claim Guardrail**: The smart contract prevents duplicate claims against a single policy by strictly validating `policyToActiveClaimId[policyId] == 0` during `lodgeComplaint`.
+3. **Simplified Citizen Complaint Lodging**: Claimants holding `CLAIMER_ROLE` initiate claims directly on-chain by lodging a preliminary complaint (`lodgeComplaint(policyId)`) without needing to perform complex client-side cryptographic hashing.
+4. **Real-World Oracles & Separation of Duties**: Real-world authorized actors (Civic Fire Officers and Independent Surveyors) act as attestors / oracles to independently authenticate incidents and quantify physical loss before any claim approval.
+5. **Strict Integer Loss Bounds**: Integer arithmetic denominated in **INR paise** (₹1 = 100 paise) prevents floating-point inaccuracies. Total loss and salvage guardrails (`salvageValue <= totalLoss`) are strictly enforced both client-side and on-chain.
+6. **No Direct Token/Fiat Custody**: Settlements are recorded as insurer attestations linked to off-chain bank payment transaction hashes (NEFT / RTGS / UTR). The contract does not transfer ETH or fiat.
+7. **Real Web3 Authentication**: No simulated Web2 credentials or mock personas. Users authenticate directly via MetaMask, and dashboard access is strictly governed by the on-chain `hasRole()` smart contract response.
 
 ---
 
@@ -101,30 +107,31 @@ sequenceDiagram
     Insurer->>Contract: verifyPolicy(policyId)
 
     Note over Claimer,Contract: Phase 2: Fire Incident Complaint Lodging
-    Claimer->>Contract: lodgeComplaint(policyId, evidenceHash)
-    Note right of Contract: Claim created (COMPLAINT_LODGED)
+    Claimer->>Contract: lodgeComplaint(policyId)
+    Note right of Contract: Duplicate claim check passed; Status: COMPLAINT_LODGED
 
     Note over Insurer,Officer: Phase 3: Incident Formalization & Civic Certification
-    Insurer->>Contract: reportFire(policyId, incidentDate, incidentRefHash, evidenceHash)
-    Note right of Contract: Claim status updated to INITIALIZED
+    Insurer->>Contract: reportFire(policyId, incidentDate, incidentRefHash)
+    Note right of Contract: Status: INITIALIZED
     Officer->>Contract: verifyIncident(incidentId, fireReportHash)
+    Note right of Contract: Incident certified by Civic Oracle
 
     Note over Insurer,Surveyor: Phase 4: Loss Survey & Assessment
     Insurer->>Contract: assignSurveyor(incidentId, surveyorAddress)
-    Note right of Contract: Claim status updated to SUBMITTED
+    Note right of Contract: Status: SUBMITTED
     Surveyor->>Contract: submitAssessment(claimId, buildingLoss, contentsLoss, machineryLoss, salvageValue, reportHash)
-    Note right of Contract: Claim status updated to ASSESSED
+    Note right of Contract: Mathematical bounds verified; Status: ASSESSED
 
     Note over Insurer,Contract: Phase 5: Claim Decision & Settlement Attestation
     alt Approved Claim
         Insurer->>Contract: approveClaim(claimId, approvedAmount <= eligibleAmount)
-        Note right of Contract: Claim status updated to APPROVED
+        Note right of Contract: Status: APPROVED
         Note over Insurer: Off-chain bank disbursement (NEFT/RTGS)
         Insurer->>Contract: recordSettlement(claimId, settledAmount, paymentRefHash)
-        Note right of Contract: Claim status updated to SETTLED
+        Note right of Contract: Status: SETTLED
     else Rejected Claim
         Insurer->>Contract: rejectClaim(claimId, reasonHash)
-        Note right of Contract: Claim status updated to REJECTED
+        Note right of Contract: Status: REJECTED
     end
 ```
 
@@ -133,10 +140,10 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> NONE
-    NONE --> COMPLAINT_LODGED : Claimer lodges complaint with evidence hash
-    COMPLAINT_LODGED --> INITIALIZED : Insurer formalizes complaint into active incident
-    INITIALIZED --> SUBMITTED : Insurer assigns Surveyor to incident
-    SUBMITTED --> ASSESSED : Assigned Surveyor submits loss evaluation
+    NONE --> COMPLAINT_LODGED : Claimer lodges complaint (lodgeComplaint)
+    COMPLAINT_LODGED --> INITIALIZED : Insurer formalizes complaint into active incident (reportFire)
+    INITIALIZED --> SUBMITTED : Insurer assigns Surveyor to incident (assignSurveyor)
+    SUBMITTED --> ASSESSED : Assigned Surveyor submits loss evaluation (submitAssessment)
     COMPLAINT_LODGED --> REJECTED : Insurer rejects complaint
     INITIALIZED --> REJECTED : Insurer rejects incident/claim
     SUBMITTED --> REJECTED : Insurer rejects claim prior to assessment
@@ -159,55 +166,59 @@ FireChain defines 5 distinct on-chain roles governed by OpenZeppelin's `AccessCo
 | **`INSURER_ROLE`** | `keccak256("INSURER_ROLE")` | Underwrites policies, verifies policy coverage, formalizes citizen complaints (`reportFire`), assigns surveyors, approves/rejects claims, records bank settlements. |
 | **`FIRE_OFFICER_ROLE`** | `keccak256("FIRE_OFFICER_ROLE")` | Civic authority / oracle. Inspects incident reports, validates emergency dispatches, and commits official fire department report hashes on-chain (`verifyIncident`). |
 | **`SURVEYOR_ROLE`** | `keccak256("SURVEYOR_ROLE")` | Licensed loss assessor. Submits itemized loss breakdowns (building, contents, machinery, salvage) and assessment report hashes (`submitAssessment`). |
-| **`CLAIMER_ROLE`** | `keccak256("CLAIMER_ROLE")` | Policyholder / claimant. Lodges preliminary fire incident complaints with cryptographic damage evidence (`lodgeComplaint`) and tracks claim status. |
+| **`CLAIMER_ROLE`** | `keccak256("CLAIMER_ROLE")` | Policyholder / claimant. Lodges preliminary fire incident complaints (`lodgeComplaint`) and tracks claim status. |
 
 ---
 
-## Interactive Web UI / DApp Dashboard
+## Interactive Web UI / Role Dashboards
 
-The project includes an interactive Web3 dashboard located in [`frontend/`](frontend) designed for stakeholder interaction:
+The DApp frontend ([`frontend/`](frontend)) provides customized, role-protected dashboards for each participant in the ecosystem:
 
-### Key Features
-1. **Strict Web3 Authentication & 5-Role Protected Routing**:
-   - Direct connection via MetaMask (`window.ethereum.request({ method: 'eth_requestAccounts' })`).
-   - Auto-reloads and reconciles on `accountsChanged` and `chainChanged`.
-   - Queries `hasRole()` on-chain for all 5 roles (`DEFAULT_ADMIN_ROLE`, `INSURER_ROLE`, `FIRE_OFFICER_ROLE`, `SURVEYOR_ROLE`, `CLAIMER_ROLE`).
-   - Strict "Unauthorized Access" screen for unassigned wallets (`userRole === 'NONE'`); manual persona-switching is completely removed.
-2. **Simplified Claimer Complaint Flow (`ClaimerDashboard`)**:
-   - Streamlined policyholder experience: single numeric input for `policyId` (no complex manual hashing or file uploads required).
-   - Directly executes `contract.lodgeComplaint(policyId)` on-chain.
-   - Live read-only status tracking for the claimant's own complaints and settlements (`COMPLAINT_LODGED` -> `INITIALIZED` -> `SUBMITTED` -> `ASSESSED` -> `APPROVED` -> `SETTLED`).
-3. **Civic Fire Oracle & Offline Auto-Hashing (`FireOfficerDashboard`)**:
-   - Official Fire Department incident certification via `verifyIncident(incidentId, fireReportHash)`.
-   - **Offline `crypto.subtle` Auto-Hashing**: Drag-and-drop file uploader that reads official incident reports into an in-memory `ArrayBuffer` and computes a 32-byte SHA-256 digest in real time. The raw file stays strictly on the client machine and is never transmitted over any network or blockchain.
-4. **Surveyor Loss Quantification with Math Guardrails (`SurveyorDashboard`)**:
-   - Itemized loss appraisal by category (Building, Contents, Machinery, Salvage) calling `submitAssessment(...)`.
-   - **Client-Side Mathematical Guardrail**: Real-time evaluation prevents submission if $\text{salvageValue} > (\text{buildingLoss} + \text{contentsLoss} + \text{machineryLoss})$, displaying an alert and disabling the submit button to preempt on-chain revert.
-   - Integrated offline `crypto.subtle` auto-hashing for the formal technical survey report.
-5. **Insurer Full-Cycle Workflow Desk (`InsurerDashboard`)**:
-   - 5 dedicated workflow stages: Policy Registration (`registerPolicy`), Policy Verification (`verifyPolicy`), Incident Formalization (`reportFire`), Surveyor Assignment (`assignSurveyor`), Claim Approval (`approveClaim`), and Bank Fiat Settlement Proof (`recordSettlement`).
-6. **Admin Governance & RBAC Portal (`AdminDashboard`)**:
-   - Live contract global metrics queried directly from storage (`getTotalPolicies`, `getTotalIncidents`, `getTotalClaims`, `getTotalAssessments`).
-   - Stakeholder registration form: assigns `INSURER`, `FIRE_OFFICER`, `SURVEYOR`, or `CLAIMER` roles on-chain via `registerStakeholder(address, roleEnum)`.
-   - On-chain role revocation support (`revokeStakeholder`).
-7. **Live TransactionReceipt Block Visualizer**:
-   - Reusable `<TransactionReceipt/>` component rendered upon every state-modifying transaction mined across all dashboards.
-   - Visually presents `transactionHash`, mined `blockNumber`, and `gasUsed`, proving cryptographic finality and EVM block execution for academic presentations.
+### 1. Insurer Desk & Dynamic Workflow Queue
+- **Streamlined Dashboard Layout**: Legacy horizontal navigation tabs have been replaced with a dynamic, unified workflow queue.
+- **Permanent "Issue Policy" Panel**: Anchored at the top with collapsible toggling, cryptographic file hashing for policy terms/documents, and quick policy verification.
+- **Dynamic Recency Sorting**: Automatically hoists the most recently updated claim/incident to the absolute top of the feed based on on-chain activity timestamps.
+- **Real-Time Search & Filter**: Filter claims instantly by `Claim ID`, `Policy ID`, or `Incident Reference Hash`.
+- **6-State Action Menus & Modals**:
+  - `COMPLAINT_LODGED` &rarr; Action menu: **"Formalize Incident"** (opens modal) or **"Discard"** (locally hides).
+  - `INITIALIZED` (unverified) &rarr; Status: **"Pending work of Fire Officer"** (action disabled).
+  - `INITIALIZED` (verified) &rarr; Action menu: **"Assign Surveyor"** (opens modal) or **"Discard"**.
+  - `SUBMITTED` &rarr; Status: **"Pending work of Surveyor"** (action disabled).
+  - `ASSESSED` &rarr; Action menu: **"Approve Claim"** (opens modal) or **"Discard"**.
+  - `APPROVED` &rarr; Action menu: **"Record Settlement"** (opens modal) or **"Discard"**.
 
-### Running the Frontend
-```powershell
-# From project root:
-npm run frontend:dev
+### 2. Blockchain Policy Ledger Visualizer
+- **Component**: [`PolicyLedger.tsx`](frontend/src/components/PolicyLedger.tsx) integrated directly into the Insurer Dashboard.
+- **Live Node Synchronization**: "Sync from Blockchain" button querying `getTotalPolicies()`, `getPolicy(i)`, and `policyToActiveClaimId(i)` in real time.
+- **Filterable Statuses**: Filter by `All`, `Active`, `Claimed`, or `Expired`.
+- **Color-Coded Status Badges**:
+  - <span style="color:#10b981">**Active (Green)**</span>: Policy valid with no active claims.
+  - <span style="color:#f59e0b">**Claimed (Orange)**</span>: Active claim ID exists on-chain.
+  - <span style="color:#ef4444">**Expired (Red)**</span>: Policy end timestamp is in the past.
+- **Data Table**: Displays `Policy ID`, truncated `Policyholder Ref` hash, formatted `Sum Insured` in INR, `Start Date`, `End Date`, and `Status`.
 
-# Or inside frontend/:
-cd frontend
-npm run dev
-```
+### 3. Claimer Portal & Simplified Complaint Flow
+- **Single-Input Filing**: Enter the `policyId` to lodge a claim directly via `contract.lodgeComplaint(policyId)`.
+- **Duplicate Claim Protection**: Built-in verification halts submissions if a policy already has an active claim.
+- **Live Status Feed**: Read-only tracking for the claimant's complaints through all 8 lifecycle states.
 
-Build for production:
-```powershell
-npm run frontend:build
-```
+### 4. Fire Officer Civic Oracle & Offline Auto-Hashing
+- **Conditional Form Display**: Form remains hidden by default, revealing only when a pending incident is selected from the unverified queue.
+- **Zero-Transmission Offline File Hashing**: In-browser `crypto.subtle` SHA-256 calculation converts raw incident report files into 32-byte digests. The original file never leaves the user's machine.
+
+### 5. Surveyor Assessment with Mathematical Guardrails
+- **Conditional Form**: Assessment submission opens only when an assigned claim is selected.
+- **Client-Side Guardrails**: Evaluates $\text{salvageValue} \le (\text{buildingLoss} + \text{contentsLoss} + \text{machineryLoss})$ in real time, preventing transaction reverts before they hit the blockchain.
+- **Integrated File Hasher**: Computes technical appraisal document hashes for tamper-evident on-chain attestation.
+
+### 6. Admin Governance & RBAC Portal
+- **Contract Metrics**: Real-time read of `getTotalPolicies`, `getTotalIncidents`, `getTotalClaims`, and `getTotalAssessments`.
+- **Stakeholder Management**: Role registration (`registerStakeholder`) and revocation (`revokeStakeholder`) across all roles.
+
+### 7. TransactionReceipt Block Finality Visualizer
+- **Component**: [`TransactionReceipt.tsx`](frontend/src/components/TransactionReceipt.tsx).
+- Automatically displays upon mining of any state-modifying transaction across any dashboard.
+- Surfaces `transactionHash`, `blockNumber`, and `gasUsed` for complete verification.
 
 ---
 
@@ -222,6 +233,7 @@ $$\text{grossLoss} = \text{totalLoss} - \text{salvageValue} \quad (\text{Contrac
 $$\text{eligibleAmount} = \min\Big(\max(\text{grossLoss} - \text{deductible}, 0), \; \text{sumInsured}\Big)$$
 
 - **Strict Salvage Guard**: `require(salvageValue <= totalLoss, "Salvage exceeds total loss");` prevents underflow.
+- **Duplicate Claim Guard**: `require(policyToActiveClaimId[policyId] == 0, "An active claim already exists for this policy");`.
 - **Approval Guardrail**: The insurer can only approve an amount satisfying $0 < \text{approvedAmount} \le \text{eligibleAmount}$.
 - **Settlement Guardrail**: The recorded settlement amount must strictly equal $\text{approvedAmount}$.
 
@@ -232,21 +244,32 @@ $$\text{eligibleAmount} = \min\Big(\max(\text{grossLoss} - \text{deductible}, 0)
 ```text
 FireChain/
 ├── contracts/
-│   └── FireInsurance.sol          # Core Solidity smart contract
+│   └── FireInsurance.sol          # Core Solidity smart contract (AccessControl, 8 states)
 ├── frontend/                      # Web UI / DApp Dashboard
 │   ├── index.html                 # Single page application entry
-│   ├── package.json               # Frontend dependencies (React, Vite, Ethers, Tailwind)
+│   ├── package.json               # Frontend dependencies (React, Vite, Ethers v6, Tailwind)
 │   ├── vite.config.ts             # Vite bundler configuration
 │   ├── tailwind.config.js         # Custom theme & styling configuration
 │   └── src/
-│       ├── App.tsx                # Protected routing & Web3 authentication shell
+│       ├── App.tsx                # Protected role-based routing & Web3 authentication shell
 │       ├── main.tsx               # React root render
-│       ├── config/                # Contract ABI & network definitions
-│       ├── context/               # Web3Context with MetaMask & on-chain role checks
-│       ├── components/            # Navbar, StatCards, StatusBadges, FileHasher, TransactionReceipt
-│       ├── pages/                 # Dashboard, Policies, Incidents, Claims, Roles, ClaimerPortal
-│       └── utils/                 # Crypto hashing & currency formatters
-├── scripts/
+│       ├── config/                # Contract ABI, constants, status mappings
+│       ├── context/               # Web3Context with MetaMask connection & on-chain hasRole() checks
+│       ├── components/            # Shared components:
+│       │   ├── Navbar.tsx         # Header navigation (clean brand logo & wallet stats)
+│       │   ├── PolicyLedger.tsx   # Blockchain policy ledger visualizer & status filter
+│       │   ├── TransactionReceipt.tsx # Cryptographic EVM block mining proof component
+│       │   ├── FileHasher.tsx     # Client-side offline SHA-256 file hashing utility
+│       │   ├── StatCard.tsx       # Reusable analytics card
+│       │   └── Badge.tsx          # Status indicators
+│       ├── pages/                 # Role-based dashboards:
+│       │   ├── AdminDashboard.tsx       # Stakeholder RBAC & global protocol metrics
+│       │   ├── InsurerDashboard.tsx     # Dynamic lifecycle queue, policy issuance & modals
+│       │   ├── FireOfficerDashboard.tsx # Civic oracle incident certification
+│       │   ├── SurveyorDashboard.tsx    # Loss appraisal with client-side math guardrails
+│       │   └── ClaimerDashboard.tsx     # Citizen complaint filing & status tracking
+│       └── utils/                 # Crypto hashing & currency/date formatters
+├── scripts/                       # CLI TypeScript workflow automation scripts
 │   ├── deploy.ts                  # Hardhat deployment script
 │   ├── register-stakeholders.ts   # Assigns RBAC stakeholder roles
 │   ├── register-policy.ts         # Registers insurance policy
@@ -266,10 +289,10 @@ FireChain/
 │   ├── test-roles.ts              # RBAC boundary verification
 │   └── hash-document.ts           # CLI document SHA-256 calculator
 ├── test/
-│   └── FireInsurance.test.ts      # Automated unit & integration tests (38 tests)
-├── hardhat.config.ts              # Hardhat configuration (local & Sepolia)
+│   └── FireInsurance.test.ts      # Automated unit & integration tests
+├── hardhat.config.ts              # Hardhat configuration (local node & Sepolia)
 ├── package.json                   # Root dependencies & CLI npm scripts
-└── README.md                      # Complete project documentation
+└── README.md                      # Project documentation
 ```
 
 ---
@@ -279,11 +302,12 @@ FireChain/
 ### System Requirements
 - **Node.js**: v20 or higher
 - **npm**: v10.0.0 or higher
+- **MetaMask Extension**: Installed in browser for Web3 DApp interaction
 - **OS**: Windows, macOS, or Linux
 
 ### Installation
 
-Clone the repository and install all root and frontend dependencies:
+Clone the repository and install all dependencies:
 
 ```powershell
 npm install
@@ -306,7 +330,7 @@ Compile the Solidity smart contracts:
 npm run compile
 ```
 
-Run the automated test suite (38 passing tests):
+Run the automated test suite:
 ```powershell
 npm test
 ```
@@ -314,7 +338,7 @@ npm test
 ### 2. Start Local Node & Deploy
 
 ```powershell
-# Terminal 1: Start node
+# Terminal 1: Start local node
 npx hardhat node --network hardhatMainnet
 
 # Terminal 2: Deploy & Seed Stakeholders
@@ -334,14 +358,23 @@ npm run register:stakeholders
 8. **Disburse & Record Bank Settlement**: `npm run record:settlement`
 9. **Audit Ledger Summary**: `npm run list:records`
 
+### 4. Query & Verification Commands
+
+```powershell
+npm run get:policy -- --id 1
+npm run get:incident -- --id 1
+npm run get:claim -- --id 1
+npm run test:roles
+```
+
 ---
 
 ## Security, Privacy & Prototype Limitations
 
 1. **Academic Scope**: This repository is an academic and architectural prototype. It has not undergone formal security audits and must not be used with real financial assets.
-2. **Data Minimization**: Public blockchains cannot be made private through Solidity `private` variables. Sensitive data must never be committed to blockchain storage.
-3. **Off-Chain Oracles**: Smart contracts cannot independently verify physical world events. The security model relies on the identity verification and integrity of designated fire department officials and licensed loss adjusters.
-4. **Off-Chain Fiat Settlement**: Real-world claim disbursements occur through banking networks (NEFT/RTGS). The smart contract serves as an immutable audit trail and attestation log rather than a payment processor.
+2. **Data Minimization**: Sensitive original documents never reside on-chain. Only cryptographic 32-byte digests and workflow state transitions are committed to the distributed ledger.
+3. **Off-Chain Oracles**: Smart contracts cannot independently verify physical world events. The trust model relies on the authenticated identities of civic fire department officials and licensed loss adjusters.
+4. **Off-Chain Fiat Settlement**: Real-world claim disbursements occur through banking networks (NEFT/RTGS). The smart contract serves as an immutable audit trail and payment attestation log rather than a payment processor.
 
 ---
 

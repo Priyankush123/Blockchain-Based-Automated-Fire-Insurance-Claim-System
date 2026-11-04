@@ -272,6 +272,7 @@ contract FireInsurance is AccessControl {
         require(p.exists, "Policy does not exist");
         // require(p.verified, "Policy not verified");
         require(p.cancelledAt == 0, "Policy is cancelled");
+        require(policyToActiveClaimId[policyId] == 0, "An active claim already exists for this policy");
 
         claimCount++;
         uint256 id = claimCount;

@@ -44,9 +44,6 @@ export const Navbar: React.FC = () => {
               <div>
                 <span className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
                   FireChain
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-flame-950 text-flame-400 border border-flame-700/50 uppercase font-mono">
-                    Decentralized
-                  </span>
                 </span>
                 <span className="text-[11px] text-slate-400 block -mt-1">
                   On-Chain Fire Insurance Claims DApp

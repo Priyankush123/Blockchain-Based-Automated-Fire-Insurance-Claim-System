@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { ethers } from "ethers";
 import { useWeb3 } from "../context/Web3Context";
 import { TransactionReceipt } from "../components/TransactionReceipt";
+import { PolicyLedger } from "../components/PolicyLedger";
 import { computeSHA256, hashString } from "../utils/crypto";
 import { formatPaise, rupeesToPaise, shortenAddress } from "../utils/formatters";
 import {
@@ -1051,7 +1052,10 @@ export const InsurerDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* SECTION 3: Inline Action Modals (Formalize, Assign, Approve, Settle) */}
+      {/* SECTION 3: On-Chain Blockchain Policy Ledger */}
+      <PolicyLedger contract={contract} />
+
+      {/* SECTION 4: Inline Action Modals (Formalize, Assign, Approve, Settle) */}
       {activeModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
